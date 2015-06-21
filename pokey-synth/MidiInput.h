@@ -67,6 +67,7 @@ public:
           case 0x80: // note off
           case 0x90: // note on
           case 0xB0: // CC
+          case 0xE0: // bend
             return m_runningStatus; 
           }
         }
