@@ -63,9 +63,9 @@ void setup()
   //Pokey1Channels[0]->vol(255);
   //  LogicalVoice1.assign(Pokey1Channels[0]);
   //  LogicalVoice1.trig(61,127);
-  LogicalChannel1.init(1);
+  LogicalChannel1.init(2);
   LogicalChannel1.assign(0, Pokey1Channels[0]);
-//  LogicalChannel1.assign(1, Pokey1Channels[1]);
+  LogicalChannel1.assign(1, Pokey1Channels[1]);
 //  LogicalChannel1.assign(2, Pokey1Channels[2]);
 //  LogicalChannel1.assign(3, Pokey1Channels[3]);
 

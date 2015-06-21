@@ -13,7 +13,7 @@
 CLogicalVoice::CLogicalVoice()
 {
   m_pch = NULL;
-  m_note = 0;
+  m_note = 0.0;
   m_vel = 0;
   m_envPhase = CLogicalVoice::ENV_NONE;
 }
@@ -27,7 +27,7 @@ void CLogicalVoice::update(CLogicalChannel *lch)
 {  
   if(!m_pch)
     return;
-  if(m_note) {
+  if(m_note>1) {
     float note = m_note + lch->m_bend + lch->m_vibrato;
     float freq = 440.0 * pow(2.0,((note-57.0)/12.0));
     m_pch->pitch(freq);
@@ -50,7 +50,7 @@ void CLogicalVoice::update(CLogicalChannel *lch)
 ///////////////////////////////////////////////////////////////////////
 CLogicalChannel::CLogicalChannel() 
 {
-  m_flags = 0;//FLAG_FULLVELOCITY;
+  m_flags = 0; //FLAG_UNISON;
   m_voices = NULL;
   m_midiChannel = OMNI;
   m_noteCount = 0;
@@ -68,7 +68,8 @@ CLogicalChannel::CLogicalChannel()
   m_vibCounter = 0;
   m_vibrato = 0.0;
   m_vibLevel = 5;
-  
+ 
+  m_detune = 7;
 }
 ///////////////////////////////////////////////////////////////////////  
 void CLogicalChannel::init(int voices)
@@ -141,8 +142,7 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
   // place the new note at the top of the stack
   m_notes[m_noteCount-1].note = note;
   m_notes[m_noteCount-1].velocity = velocity;    
-  if(m_noteCount > m_voiceCount) {    
-
+  if(!(m_flags & FLAG_UNISON) && (m_noteCount > m_voiceCount)) {    
     // more notes than voices, so mute the oldest note
     int nextMute = m_noteCount-m_voiceCount-1;
     untrig(m_notes[nextMute].note);
@@ -158,12 +158,14 @@ void CLogicalChannel::handleNoteOff(byte note)
 {
   untrig(note);
   if(deleteNote(note)) {
-    if(m_noteCount >= m_voiceCount) {      
+    
+    int voiceCount = (m_flags & FLAG_UNISON)? 1:m_voiceCount;
+    if(m_noteCount >= voiceCount) {      
       // all voices were in use.. we might be able to 
       // reactivate a note that was previously overridden
       trig(
-        m_notes[m_noteCount-m_voiceCount].note, 
-        m_notes[m_noteCount-m_voiceCount].velocity
+        m_notes[m_noteCount-voiceCount].note, 
+        m_notes[m_noteCount-voiceCount].velocity
        );
     }
   }
@@ -184,45 +186,76 @@ void CLogicalChannel::handlePitchBend(byte lo, byte hi)
 void CLogicalChannel::trig(byte note, byte velocity) {    
 
   CLogicalVoice *voice = NULL;
-  // check if the note is already assigned to a channel...
-  // if it is, then retrigger it
-  for(int i=0; i<m_voiceCount; ++i) {
-    if(m_voices[i].m_note == note) {
-      voice = &m_voices[i];
-      break;
-    }
+  if(m_flags & FLAG_UNISON)
+  {
+      float n = note;
+      for(int i=0; i<m_voiceCount; ++i) {
+        voice = &m_voices[i];
+        voice->m_note = n;
+        voice->m_vel = velocity;
+        voice->m_envPhase = CLogicalVoice::ENV_ATTACK;    
+        voice->m_envLevel = 0;
+        // Spread the detuned voices so that assigned notes are
+        // n, (n+d), (n-d), (n+2d), (n-2d)... 
+        if(i&1) {
+          n -= ((i+1)*m_detune);
+        }
+        else {
+          n += ((i+1)*m_detune);
+        }
+      }
   }
-  if(!voice) {
-    // Otherwise do we have a free channel?
+  else
+  {
+    // check if the note is already assigned to a channel...
+    // if it is, then retrigger it
     for(int i=0; i<m_voiceCount; ++i) {
-      if(m_voices[i].m_envPhase == CLogicalVoice::ENV_NONE) {
+      if(m_voices[i].m_note == note) {
         voice = &m_voices[i];
         break;
       }
     }
-  }
-  if(!voice) {
-    // or failing that, one that is in release
-    for(int i=0; i<m_voiceCount; ++i) {
-      if(m_voices[i].m_envPhase == CLogicalVoice::ENV_RELEASE) {
-        voice = &m_voices[i];
-        break;
+    if(!voice) {
+      // Otherwise do we have a free channel?
+      for(int i=0; i<m_voiceCount; ++i) {
+        if(m_voices[i].m_envPhase == CLogicalVoice::ENV_NONE) {
+          voice = &m_voices[i];
+          break;
+        }
       }
     }
-  }
-  if(voice) {
-    voice->m_note = note;
-    voice->m_vel = velocity;
-    voice->m_envPhase = CLogicalVoice::ENV_ATTACK;    
-    voice->m_envLevel = 0;
+    if(!voice) {
+      // or failing that, one that is in release
+      for(int i=0; i<m_voiceCount; ++i) {
+        if(m_voices[i].m_envPhase == CLogicalVoice::ENV_RELEASE) {
+          voice = &m_voices[i];
+          break;
+        }
+      }
+    }
+    if(voice) {
+      voice->m_note = note;
+      voice->m_vel = velocity;
+      voice->m_envPhase = CLogicalVoice::ENV_ATTACK;    
+      voice->m_envLevel = 0;
+    }
   }
 }  
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::untrig(byte note) {
-  for(int i=0; i<m_voiceCount; ++i) {
-    if(m_voices[i].m_note == note) {
+  if(m_flags & FLAG_UNISON)
+  {
+    for(int i=0; i<m_voiceCount; ++i) {
       m_voices[i].m_envPhase = CLogicalVoice::ENV_RELEASE;
-      return;
+    }
+  }
+  else
+  {  
+    for(int i=0; i<m_voiceCount; ++i) {
+      if(m_voices[i].m_note == note) {
+        m_voices[i].m_envPhase = CLogicalVoice::ENV_RELEASE;
+        return;
+      }
     }
   }
 }

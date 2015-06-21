@@ -12,7 +12,7 @@ public:
   };
   byte m_envPhase;
   unsigned int m_envLevel;  // envelope modulated level (0xFFFF is max)
-  byte m_note;       // assigned MIDI note
+  float m_note;       // assigned MIDI note
   byte m_vel;        // assigned MIDI note velocity
   
   CLogicalVoice();
@@ -43,7 +43,8 @@ protected:
   byte m_noteCount;
 public:  
   enum {
-    FLAG_FULLVELOCITY    = 0x01
+    FLAG_FULLVELOCITY    = 0x01,
+    FLAG_UNISON          = 0x02      // when this flag is set, all available voices play in unison
   };
   
   byte            m_flags;
@@ -63,6 +64,7 @@ public:
   byte            m_vibLevel;
   float           m_vibrato;
 
+  float           m_detune;          // detune amount for voices played in unison
   
   CLogicalChannel(); 
   void init(int voices);
