@@ -117,12 +117,13 @@ void CPokeyChannel::pitch(float hz) {    unsigned int v;
 }
 
 ///////////////////////////////////////////////////////////  
+// Volume is provided as 0-255
 void CPokeyChannel::vol(byte level) {
   if(m_flags & FLAG_NODIV) {
     level = 0;
   }
   byte v = m_ctrl & 0xF0;
-  v|=((byte)(level>>3) & 0x0F);
+  v|=(level>>4);
   if(v != m_ctrl) {
     m_ctrl = v;
     m_pokey->write(m_ctrl_reg, m_ctrl);

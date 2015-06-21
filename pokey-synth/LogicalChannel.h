@@ -4,13 +4,19 @@ class CLogicalVoice
 {
   CPokeyChannel *m_pch;   // physical pokey channel
 public:  
-  byte m_note;  // MIDI note
-  byte m_vel;  // MIDI velocity
+  enum {
+    ENV_NONE,        // The voice is not playing
+    ENV_ATTACK,      // The voice is triggered, the envelope is in the attack phase
+    ENV_SUSTAIN,     // The voice is triggered, the envelope is in the sustain phase
+    ENV_RELEASE      // The voice is no longer triggered, the envelope is releasing
+  };
+  byte m_envPhase;
+  unsigned int m_envLevel;  // envelope modulated level (0xFFFF is max)
+  byte m_note;       // assigned MIDI note
+  byte m_vel;        // assigned MIDI note velocity
   
   CLogicalVoice();
   void assign(CPokeyChannel *pch);
-  void trig(byte note, byte vel, CLogicalChannel *lch);
-  void untrig(CLogicalChannel *lch);
   void update(CLogicalChannel *lch);
 };
 
@@ -39,12 +45,25 @@ public:
   enum {
     FLAG_FULLVELOCITY    = 0x01
   };
-  float m_bend;
-  byte   m_bendRange;               // pitch bend range
-  byte   m_midiChannel;             // the midi channel for this logical channel;
-  byte   m_flags;
-  //float  m_deltaVolume;             // volume delta (for tremelo effect etc)
-  //float  m_deltaPitch;              // pitch delta
+  
+  byte            m_flags;
+  byte            m_midiChannel;      // the midi channel for this logical channel;
+  byte            m_bendRange;        // pitch bend range
+  float           m_bend;             // pitch bend amount (MIDI note units)
+  unsigned int    m_attack;           // attack phase step (increment per ms of 0xFFFF max level)
+  unsigned int    m_release;          // release phase step (increment per ms of 0xFFFF max level)
+  
+  int             m_tremStep;
+  unsigned int    m_tremCounter;
+  byte            m_tremLevel;
+  float           m_tremelo;
+
+  int             m_vibStep;
+  unsigned int    m_vibCounter;
+  byte            m_vibLevel;
+  float           m_vibrato;
+
+  
   CLogicalChannel(); 
   void init(int voices);
   void assign(int voice, CPokeyChannel *pch);
@@ -55,6 +74,7 @@ public:
   void handlePitchBend(byte lo, byte hi);
   void trig(byte note, byte velocity);  
   void untrig(byte note);
+  void tick();
 };
 
 
