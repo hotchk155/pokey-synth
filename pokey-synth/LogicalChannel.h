@@ -1,3 +1,9 @@
+///////////////////////////////////////////////////////////
+//
+// POKEYSYNTH 
+// hotchk155/2015
+//
+///////////////////////////////////////////////////////////
 class CLogicalChannel;
 ///////////////////////////////////////////////////////////////////////////////////////////
 class CLogicalVoice 
@@ -14,6 +20,7 @@ public:
   unsigned int m_envLevel;  // envelope modulated level (0xFFFF is max)
   float m_note;       // assigned MIDI note
   byte m_vel;        // assigned MIDI note velocity
+  float           m_detune;          
   
   CLogicalVoice();
   void assign(CPokeyChannel *pch);
@@ -64,7 +71,11 @@ public:
   byte            m_vibLevel;
   float           m_vibrato;
 
-  float           m_detune;          // detune amount for voices played in unison
+  byte            m_portaLevel;      // portamento time for mono modes
+  byte            m_portaTarget;     // target note for portamento
+  float           m_portaStep;       // pitch step per ms
+  float           m_portamento;      // actual note played by portamento engine
+
   
   CLogicalChannel(); 
   void init(int voices);
@@ -77,6 +88,7 @@ public:
   void trig(byte note, byte velocity);  
   void untrig(byte note);
   void tick();
+  void detune(float detune);
 };
 
 

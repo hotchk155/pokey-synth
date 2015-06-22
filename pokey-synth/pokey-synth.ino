@@ -7,7 +7,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 #include "Arduino.h"
-
 #include "PortIO.h"
 #include "PokeySynth.h"
 #include "Pokey.h"
@@ -66,6 +65,9 @@ void setup()
   LogicalChannel1.init(2);
   LogicalChannel1.assign(0, Pokey1Channels[0]);
   LogicalChannel1.assign(1, Pokey1Channels[1]);
+  LogicalChannel1.detune(0);
+//  LogicalChannel1.assign(2, Pokey1Channels[1]);
+//  LogicalChannel1.assign(3, Pokey1Channels[1]);
 //  LogicalChannel1.assign(2, Pokey1Channels[2]);
 //  LogicalChannel1.assign(3, Pokey1Channels[3]);
 

@@ -1,3 +1,11 @@
+//TODO inhibit portamento on poly channel
+
+///////////////////////////////////////////////////////////
+//
+// POKEYSYNTH 
+// hotchk155/2015
+//
+///////////////////////////////////////////////////////////
 #include "Arduino.h"
 #include "PokeySynth.h"
 #include "Pokey.h"
@@ -16,6 +24,7 @@ CLogicalVoice::CLogicalVoice()
   m_note = 0.0;
   m_vel = 0;
   m_envPhase = CLogicalVoice::ENV_NONE;
+  m_detune = 0;
 }
 ///////////////////////////////////////////////////////////////////////
 void CLogicalVoice::assign(CPokeyChannel *pch) 
@@ -27,14 +36,26 @@ void CLogicalVoice::update(CLogicalChannel *lch)
 {  
   if(!m_pch)
     return;
-  if(m_note>1) {
-    float note = m_note + lch->m_bend + lch->m_vibrato;
+  float n;
+  if(lch->m_portaLevel) {
+    n = lch->m_portamento;
+  }
+  else {
+    n = m_note;
+  }
+  if(n>1) {    
+    float note = n + m_detune + lch->m_bend + lch->m_vibrato;
     float freq = 440.0 * pow(2.0,((note-57.0)/12.0));
     m_pch->pitch(freq);
 
-//    float vol = 255;//((float)m_vel * (float)m_envLevel)/(65535.0*8.0);
     float vol = lch->m_tremelo * 255.0 * (m_envLevel/65535.0);
     m_pch->vol(vol);
+    
+//    m_pch->dist(CPokeyChannel::DIST_5);
+//    DIST_5     = 0b01100000,
+//    DIST_5_4   = 0b01000000,
+//    DIST_5_17  = 0b00000000,
+//    DIST_17    = 0b10000000,
   }
   else {
     m_pch->vol(0);
@@ -50,7 +71,7 @@ void CLogicalVoice::update(CLogicalChannel *lch)
 ///////////////////////////////////////////////////////////////////////
 CLogicalChannel::CLogicalChannel() 
 {
-  m_flags = 0; //FLAG_UNISON;
+  m_flags = FLAG_UNISON|FLAG_FULLVELOCITY;
   m_voices = NULL;
   m_midiChannel = OMNI;
   m_noteCount = 0;
@@ -67,9 +88,13 @@ CLogicalChannel::CLogicalChannel()
   m_vibStep = 300;
   m_vibCounter = 0;
   m_vibrato = 0.0;
-  m_vibLevel = 5;
- 
-  m_detune = 7;
+  m_vibLevel = 0;
+   
+  m_portaLevel = 2;
+  m_portaTarget = 0;
+  m_portamento = 0.0;
+  m_portaStep = 0.0;
+
 }
 ///////////////////////////////////////////////////////////////////////  
 void CLogicalChannel::init(int voices)
@@ -186,6 +211,18 @@ void CLogicalChannel::handlePitchBend(byte lo, byte hi)
 void CLogicalChannel::trig(byte note, byte velocity) {    
 
   CLogicalVoice *voice = NULL;
+  if(m_portaLevel) {
+    m_portaTarget = note;
+    if(m_portamento>0) {  
+      m_portaStep = (note - m_portamento) / (m_portaLevel * 10.0);
+      note = m_portamento;
+    }
+    else {
+      m_portamento = note;
+      m_portaStep = 127;
+    }
+  }
+  
   if(m_flags & FLAG_UNISON)
   {
       float n = note;
@@ -195,14 +232,6 @@ void CLogicalChannel::trig(byte note, byte velocity) {
         voice->m_vel = velocity;
         voice->m_envPhase = CLogicalVoice::ENV_ATTACK;    
         voice->m_envLevel = 0;
-        // Spread the detuned voices so that assigned notes are
-        // n, (n+d), (n-d), (n+2d), (n-2d)... 
-        if(i&1) {
-          n -= ((i+1)*m_detune);
-        }
-        else {
-          n += ((i+1)*m_detune);
-        }
       }
   }
   else
@@ -303,6 +332,22 @@ void CLogicalChannel::tick()
     m_vibrato = 0.0;
   }
   
+  // Run Portamento
+  if(m_portaLevel && m_portaTarget) {
+    float d = m_portamento + m_portaStep;
+    if(m_portamento > m_portaTarget && d < m_portaTarget) {
+      m_portamento = m_portaTarget;
+      m_portaTarget = 0;
+    }
+    else if(m_portamento < m_portaTarget && d > m_portaTarget) {
+      m_portamento = m_portaTarget;
+      m_portaTarget = 0;
+    }
+    else {
+      m_portamento = d;
+    }
+  }
+  
   // Run Envelopes and update channels
   for(int i=0; i<m_voiceCount; ++i) {
     switch(m_voices[i].m_envPhase) {      
@@ -333,6 +378,21 @@ void CLogicalChannel::tick()
   }  
 }
 
-
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::detune(float detune)
+{
+  float d = 0;
+  for(int i=0; i<m_voiceCount; ++i) {
+      m_voices[i].m_detune = d;
+      // Spread the detuned voices so that assigned notes are
+      // n, (n+d), (n-d), (n+2d), (n-2d)... 
+      if(i&1) {
+        d -= ((i+1)*detune);
+      }
+      else {
+        d   += ((i+1)*detune);
+      }
+  }  
+}
 
 
