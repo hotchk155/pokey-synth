@@ -16,11 +16,12 @@ public:
     ENV_SUSTAIN,     // The voice is triggered, the envelope is in the sustain phase
     ENV_RELEASE      // The voice is no longer triggered, the envelope is releasing
   };
-  byte m_envPhase;
-  unsigned int m_envLevel;  // envelope modulated level (0xFFFF is max)
-  float m_note;       // assigned MIDI note
-  byte m_vel;        // assigned MIDI note velocity
-  float           m_detune;          
+  byte m_envPhase;          // as above
+  unsigned int m_envLevel;  // envelope level 0-65535 
+  
+  float m_note;             // assigned MIDI note (0-127)
+  float m_vol;              // note velocity 0-1.0
+  float m_detune;           // voice detune in +/- fractional midi notes
   
   CLogicalVoice();
   void assign(CPokeyChannel *pch);
@@ -51,9 +52,15 @@ protected:
 public:  
   enum {
     FLAG_FULLVELOCITY    = 0x01,
-    FLAG_UNISON          = 0x02      // when this flag is set, all available voices play in unison
+    FLAG_UNISON          = 0x02,      // when this flag is set, all available voices play in unison
   };
-  
+  enum {
+    LFO_TRI,
+    LFO_RAMP,
+    LFO_REVRAMP,
+    LFO_SQ
+  };
+
   byte            m_flags;
   byte            m_midiChannel;      // the midi channel for this logical channel;
   byte            m_bendRange;        // pitch bend range
@@ -61,15 +68,15 @@ public:
   unsigned int    m_attack;           // attack phase step (increment per ms of 0xFFFF max level)
   unsigned int    m_release;          // release phase step (increment per ms of 0xFFFF max level)
   
-  int             m_tremStep;
-  unsigned int    m_tremCounter;
-  byte            m_tremLevel;
-  float           m_tremelo;
+  int             m_lfoCount;         // lfo counter value 0-65535  
+  int             m_lfoStep;          // counts per ms (lfo freq);
+  byte            m_lfoWave;          // lfo waveform
+    
+  char            m_tremLevel;        // intensity of amplitude modulation (0-127)
+  float           m_tremelo;          // amplitude modulation 0 to +1.0 (fraction of full amplitude)
 
-  int             m_vibStep;
-  unsigned int    m_vibCounter;
-  byte            m_vibLevel;
-  float           m_vibrato;
+  char            m_vibLevel;         // intensity of pitch modulation (0-127)
+  float           m_vibrato;          // pitch modulation -12.0 to +12.0 (fractional midi notes)
 
   byte            m_portaLevel;      // portamento time for mono modes
   byte            m_portaTarget;     // target note for portamento

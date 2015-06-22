@@ -22,7 +22,7 @@ CLogicalVoice::CLogicalVoice()
 {
   m_pch = NULL;
   m_note = 0.0;
-  m_vel = 0;
+  m_vol = 0.0;
   m_envPhase = CLogicalVoice::ENV_NONE;
   m_detune = 0;
 }
@@ -48,14 +48,8 @@ void CLogicalVoice::update(CLogicalChannel *lch)
     float freq = 440.0 * pow(2.0,((note-57.0)/12.0));
     m_pch->pitch(freq);
 
-    float vol = lch->m_tremelo * 255.0 * (m_envLevel/65535.0);
+    float vol = 0.5 + 15.0 * lch->m_tremelo * m_vol * (m_envLevel/65535.0);
     m_pch->vol(vol);
-    
-//    m_pch->dist(CPokeyChannel::DIST_5);
-//    DIST_5     = 0b01100000,
-//    DIST_5_4   = 0b01000000,
-//    DIST_5_17  = 0b00000000,
-//    DIST_17    = 0b10000000,
   }
   else {
     m_pch->vol(0);
@@ -80,20 +74,21 @@ CLogicalChannel::CLogicalChannel()
   m_bend = 0;
   m_attack = 65535;
   m_release = 60;
-  m_tremStep = 300;
-  m_tremCounter = 0;
-  m_tremelo = 1.0;
-  m_tremLevel = 0;
-  
-  m_vibStep = 300;
-  m_vibCounter = 0;
-  m_vibrato = 0.0;
-  m_vibLevel = 0;
    
-  m_portaLevel = 2;
+  m_portaLevel = 0;
   m_portaTarget = 0;
   m_portamento = 0.0;
   m_portaStep = 0.0;
+
+  m_lfoStep = 1000;
+  m_lfoCount = 0;
+  m_lfoWave = LFO_TRI;
+    
+  m_tremLevel = 127;
+  m_tremelo = 0;      
+
+  m_vibLevel = 0;
+  m_vibrato = 0;      
 
 }
 ///////////////////////////////////////////////////////////////////////  
@@ -173,10 +168,7 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
     untrig(m_notes[nextMute].note);
   }
   // trigger the newest note
-  trig(
-  note, 
-  velocity
-    );
+  trig(note, (m_flags & FLAG_FULLVELOCITY)? 127 : velocity);
 }
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::handleNoteOff(byte note)
@@ -188,10 +180,7 @@ void CLogicalChannel::handleNoteOff(byte note)
     if(m_noteCount >= voiceCount) {      
       // all voices were in use.. we might be able to 
       // reactivate a note that was previously overridden
-      trig(
-        m_notes[m_noteCount-voiceCount].note, 
-        m_notes[m_noteCount-voiceCount].velocity
-       );
+      trig(m_notes[m_noteCount-voiceCount].note,  (m_flags & FLAG_FULLVELOCITY)? 127 : m_notes[m_noteCount-voiceCount].velocity);
     }
   }
 }
@@ -229,7 +218,7 @@ void CLogicalChannel::trig(byte note, byte velocity) {
       for(int i=0; i<m_voiceCount; ++i) {
         voice = &m_voices[i];
         voice->m_note = n;
-        voice->m_vel = velocity;
+        voice->m_vol = velocity/127.0;
         voice->m_envPhase = CLogicalVoice::ENV_ATTACK;    
         voice->m_envLevel = 0;
       }
@@ -264,7 +253,7 @@ void CLogicalChannel::trig(byte note, byte velocity) {
     }
     if(voice) {
       voice->m_note = note;
-      voice->m_vel = velocity;
+      voice->m_vol = velocity/127.0;
       voice->m_envPhase = CLogicalVoice::ENV_ATTACK;    
       voice->m_envLevel = 0;
     }
@@ -296,41 +285,51 @@ void CLogicalChannel::tick()
 {
   long l;
   
-  // Run Tremelo
-  if(m_tremLevel) {
-    l = (long)m_tremCounter + (long)m_tremStep;
-    if(l>65535) {
-      m_tremStep = -m_tremStep;
-      m_tremCounter = 65535;
-    } else if(l<0) {
-      m_tremStep = -m_tremStep;
-      m_tremCounter = 0;
-    } else {
-      m_tremCounter = l;
-    }    
-    m_tremelo = ((float)m_tremLevel * (float)m_tremCounter)/(65535.0 * 255.0);
-  }
-  else {
-    m_tremelo = 1.0;
+  // Run LFO    
+  float lfo = 0;  // LFO value is -1.0 to +1.0
+  switch(m_lfoWave) 
+  {
+    case LFO_TRI:  // TRIANGLE
+    case LFO_SQ:   // SQUARE  
+      l = (long)m_lfoCount + (long)m_lfoStep;
+      if(l>32767) {
+        m_lfoCount = 32767;
+        m_lfoStep = -m_lfoStep;
+      } else if(l<-32767) {
+        m_lfoCount = -32767;
+        m_lfoStep = -m_lfoStep;
+      } else {
+        m_lfoCount = l;
+      }    
+      if(m_lfoWave == LFO_SQ) {
+        lfo = (m_lfoStep<0)? -1.0 : 1.0;
+      }
+      else {
+        lfo = m_lfoCount/32767.0;
+      }
+      break;      
+    case LFO_RAMP:    // RAMP UP
+    case LFO_REVRAMP:  // RAMP DOWN
+      if(m_lfoWave == LFO_REVRAMP) {
+        l = (long)m_lfoCount - m_lfoStep;
+        if(l<-32767) {
+          l = 32767;
+        }    
+      }
+      else {
+        l = (long)m_lfoCount + m_lfoStep;
+        if(l>32767) {
+          l = -32767;
+        }    
+      }
+      m_lfoCount = l;
+      lfo = m_lfoCount/32767.0;
+      break;
   }
 
-  // Run Vibrato
-  if(m_vibLevel) {
-    l = (long)m_vibCounter + (long)m_vibStep;
-    if(l>65535) {
-      m_vibStep = -m_vibStep;
-      m_vibCounter = 65535;
-    } else if(l<0) {
-      m_vibStep = -m_vibStep;
-      m_vibCounter = 0;
-    } else {
-      m_vibCounter = l;
-    }    
-    m_vibrato = 12.0 * ((float)m_vibLevel * (float)(m_vibCounter - 32768))/(65535.0 * 255.0);
-  }
-  else {
-    m_vibrato = 0.0;
-  }
+  m_tremelo = 1.0 - ((lfo + 1.0) * m_tremLevel/255.0);  // 0-1.0
+  m_vibrato = lfo * 12.0 * m_vibLevel/127.0;    // -12.0 to +12.0
+
   
   // Run Portamento
   if(m_portaLevel && m_portaTarget) {
