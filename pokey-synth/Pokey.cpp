@@ -94,6 +94,19 @@ void CPokeyChannel::dist(int mode) {
     m_pokey->write(m_ctrl_reg, m_ctrl);
   }
 }
+///////////////////////////////////////////////////////////  
+// Accept a level 0-127 and set appropriate dist level
+void CPokeyChannel::dist_lev(byte level) {
+    switch((int)(level/22.0))
+    {
+      case 1: dist(DIST_4); break;
+      case 2: dist(DIST_5); break;
+      case 3: dist(DIST_5_4); break;
+      case 4: dist(DIST_5_17); break;
+      case 5: dist(DIST_17); break;
+      default: dist(DIST_NONE); break;
+    }
+}
 
 ///////////////////////////////////////////////////////////  
 void CPokeyChannel::pitch(float hz) {    unsigned int v;
@@ -142,6 +155,10 @@ void CPokeyChannel::hpf(int hz) {
     byte v = hz_to_div8(hz);
     m_pokey->write(m_div2_reg, v);
   }
+}
+///////////////////////////////////////////////////////////  
+void CPokeyChannel::hpf_lev(byte lev) {
+  hpf((lev&0x7F)*10);
 }
 
 ///////////////////////////////////////////////////////////  

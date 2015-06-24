@@ -51,6 +51,8 @@ public:
   void reset();
   void dist(int mode);
   void pitch(float hz);
+  void hpf_lev(byte lev);  
+  void dist_lev(byte lev);  
   void vol(byte level);
   void hpf(int hz);
   byte hz_to_div8(float hz);

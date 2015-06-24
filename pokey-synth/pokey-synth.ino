@@ -56,7 +56,7 @@ void setup()
   digitalWrite(P_CS0, HIGH);
 
 
-  Pokey1NumChannels = Pokey1.configure(CPokey::MODE_16, Pokey1Channels);
+  Pokey1NumChannels = Pokey1.configure(CPokey::MODE_8HPF, Pokey1Channels);
   //  Pokey1.range(false);
   //Pokey1Channels[0]->pitch(300);
   //Pokey1Channels[0]->vol(255);
@@ -65,7 +65,7 @@ void setup()
   LogicalChannel1.init(2);
   LogicalChannel1.assign(0, Pokey1Channels[0]);
   LogicalChannel1.assign(1, Pokey1Channels[1]);
-  LogicalChannel1.detune(0);
+  LogicalChannel1.detune(7);
 //  LogicalChannel1.assign(2, Pokey1Channels[1]);
 //  LogicalChannel1.assign(3, Pokey1Channels[1]);
 //  LogicalChannel1.assign(2, Pokey1Channels[2]);

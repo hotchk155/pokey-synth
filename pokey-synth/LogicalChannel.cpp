@@ -43,13 +43,31 @@ void CLogicalVoice::update(CLogicalChannel *lch)
   else {
     n = m_note;
   }
-  if(n>1) {    
-    float note = n + m_detune + lch->m_bend + lch->m_vibrato;
+  if(n>1) {   
+    float note;
+    if(CLogicalChannel::LFO2PITCH == lch->m_lfoDest) {
+      note = n + m_detune + lch->m_bend + 12.0 * lch->m_lfo;
+    }
+    else {
+      note = n + m_detune + lch->m_bend;
+    }
     float freq = 440.0 * pow(2.0,((note-57.0)/12.0));
     m_pch->pitch(freq);
 
-    float vol = 0.5 + 15.0 * lch->m_tremelo * m_vol * (m_envLevel/65535.0);
+    float vol;   
+    if(CLogicalChannel::LFO2VOL == lch->m_lfoDest) {   
+      vol = 0.5 + 15.0 * lch->m_lfo_positive * m_vol * (m_envLevel/65535.0);
+    } else {
+      vol = 0.5 + 15.0 * m_vol * (m_envLevel/65535.0);
+    }
     m_pch->vol(vol);
+
+    if(CLogicalChannel::LFO2HPF == lch->m_lfoDest) {       
+       m_pch->hpf_lev(1000.0 * lch->m_lfo_positive);
+    }
+    else if(CLogicalChannel::LFO2DIST == lch->m_lfoDest) {       
+       m_pch->dist_lev(127.0 * lch->m_lfo_positive);
+    }
   }
   else {
     m_pch->vol(0);
@@ -72,6 +90,7 @@ CLogicalChannel::CLogicalChannel()
   m_voiceCount = 0;
   m_bendRange = 3;
   m_bend = 0;
+  
   m_attack = 65535;
   m_release = 60;
    
@@ -80,16 +99,25 @@ CLogicalChannel::CLogicalChannel()
   m_portamento = 0.0;
   m_portaStep = 0.0;
 
-  m_lfoStep = 1000;
+  m_lfoStep = 2000;
   m_lfoCount = 0;
-  m_lfoWave = LFO_TRI;
+  m_lfoWave = LFO_SQ;
+  m_lfoRun = RUN_GATE;
+
+  
+  m_lfoLevel = 127;
+  m_lfo = 0;
+  m_lfoDest = LFO2HPF;
     
-  m_tremLevel = 127;
-  m_tremelo = 0;      
+//  m_tremLevel = 0;
+//  m_tremelo = 0;      
 
-  m_vibLevel = 0;
-  m_vibrato = 0;      
+//  m_vibLevel = 0;
+//  m_vibrato = 127.0;      
 
+  m_arpPeriod = 10;
+  m_arpIndex = 0;
+  m_arpCounter = 0;
 }
 ///////////////////////////////////////////////////////////////////////  
 void CLogicalChannel::init(int voices)
@@ -199,6 +227,21 @@ void CLogicalChannel::handlePitchBend(byte lo, byte hi)
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::trig(byte note, byte velocity) {    
 
+  switch(m_lfoRun)
+  {
+    case RUN_TRIG:
+    case RUN_TRIG_GATE:
+      m_lfoCount = 0;
+      if(m_lfoStep<0)
+        m_lfoStep=-m_lfoStep;
+      break;
+    case RUN_GATE:   
+    case RUN_UNGATE:
+    case RUN_FREE:      
+    default:
+      break;
+  }
+  
   CLogicalVoice *voice = NULL;
   if(m_portaLevel) {
     m_portaTarget = note;
@@ -212,7 +255,7 @@ void CLogicalChannel::trig(byte note, byte velocity) {
     }
   }
   
-  if(m_flags & FLAG_UNISON)
+  if(m_flags & (FLAG_UNISON|FLAG_ARPEGGIATE))
   {
       float n = note;
       for(int i=0; i<m_voiceCount; ++i) {
@@ -284,52 +327,97 @@ void CLogicalChannel::untrig(byte note) {
 void CLogicalChannel::tick() 
 {
   long l;
+
+  // run arpeggiator
+  if((m_flags & FLAG_ARPEGGIATE) && (m_noteCount > 0)) {
+    if(--m_arpCounter <= 0)
+    {
+      if(m_arpIndex >= m_noteCount) {
+        m_arpIndex = 0;
+      }      
+      trig(m_notes[m_arpIndex].note,  (m_flags & FLAG_FULLVELOCITY)? 127 : m_notes[m_arpIndex].velocity);      
+      ++m_arpIndex;
+      m_arpCounter = m_arpPeriod;
+    }
+  }
   
   // Run LFO    
-  float lfo = 0;  // LFO value is -1.0 to +1.0
-  switch(m_lfoWave) 
-  {
-    case LFO_TRI:  // TRIANGLE
-    case LFO_SQ:   // SQUARE  
-      l = (long)m_lfoCount + (long)m_lfoStep;
-      if(l>32767) {
-        m_lfoCount = 32767;
-        m_lfoStep = -m_lfoStep;
-      } else if(l<-32767) {
-        m_lfoCount = -32767;
-        m_lfoStep = -m_lfoStep;
-      } else {
-        m_lfoCount = l;
-      }    
-      if(m_lfoWave == LFO_SQ) {
-        lfo = (m_lfoStep<0)? -1.0 : 1.0;
-      }
-      else {
-        lfo = m_lfoCount/32767.0;
-      }
-      break;      
-    case LFO_RAMP:    // RAMP UP
-    case LFO_REVRAMP:  // RAMP DOWN
-      if(m_lfoWave == LFO_REVRAMP) {
-        l = (long)m_lfoCount - m_lfoStep;
-        if(l<-32767) {
-          l = 32767;
-        }    
-      }
-      else {
-        l = (long)m_lfoCount + m_lfoStep;
-        if(l>32767) {
-          l = -32767;
-        }    
-      }
-      m_lfoCount = l;
-      lfo = m_lfoCount/32767.0;
+  byte run;
+  switch(m_lfoRun)
+  {      
+    case RUN_TRIG_GATE:
+    case RUN_GATE:   
+      run = !!m_noteCount;
+      break;
+    case RUN_UNGATE:
+      run = !m_noteCount;
+      break;
+    case RUN_TRIG:
+    case RUN_FREE:      
+    default:
+      run = 1;
       break;
   }
-
-  m_tremelo = 1.0 - ((lfo + 1.0) * m_tremLevel/255.0);  // 0-1.0
-  m_vibrato = lfo * 12.0 * m_vibLevel/127.0;    // -12.0 to +12.0
-
+  
+  if(run) {
+    float lfo;
+    switch(m_lfoWave) 
+    {
+      case LFO_TRI:  // TRIANGLE
+      case LFO_SQ:   // SQUARE  
+        l = (long)m_lfoCount + (long)m_lfoStep;
+        if(l>32767) {
+          m_lfoCount = 32767;
+          m_lfoStep = -m_lfoStep;
+        } else if(l<-32767) {
+          m_lfoCount = -32767;
+          m_lfoStep = -m_lfoStep;
+        } else {
+          m_lfoCount = l;
+        }    
+        if(m_lfoWave == LFO_SQ) {
+          lfo = (m_lfoStep<0)? -1.0 : 1.0;
+        }
+        else {
+          lfo = m_lfoCount/32767.0;
+        }
+        break;      
+      case LFO_RAMP:    // RAMP UP
+      case LFO_REVRAMP:  // RAMP DOWN
+        if(m_lfoWave == LFO_REVRAMP) {
+          l = (long)m_lfoCount - m_lfoStep;
+          if(l<-32767) {
+            l = 32767;
+          }    
+        }
+        else {
+          l = (long)m_lfoCount + m_lfoStep;
+          if(l>32767) {
+            l = -32767;
+          }    
+        }
+        m_lfoCount = l;
+        lfo = m_lfoCount/32767.0;
+        break;
+      case LFO_RND1:
+      case LFO_RND2:      
+        if(--m_lfoCount <= 0) {
+          lfo = ((float)random(2000))/1000.0-1.0;        
+          m_lfoCount = (m_lfoWave == LFO_RND1) ? abs(m_lfoStep) : random(abs(m_lfoStep));
+        }
+        else {
+          run = 0;
+        }
+        break;
+       default:
+         lfo = 0; 
+         break;
+    }
+    if(run) {
+      m_lfo = lfo * m_lfoLevel/127.0;
+      m_lfo_positive = (m_lfo + 1.0)/2.0;
+    }
+  }
   
   // Run Portamento
   if(m_portaLevel && m_portaTarget) {
