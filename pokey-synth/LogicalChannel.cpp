@@ -36,38 +36,59 @@ void CLogicalVoice::update(CLogicalChannel *lch)
 {  
   if(!m_pch)
     return;
-  float n;
+  float value;
   if(lch->m_portaLevel) {
-    n = lch->m_portamento;
+    value = lch->m_portamento;
   }
   else {
-    n = m_note;
+    value = m_note;
   }
-  if(n>1) {   
-    float note;
+  if(value>1) {   
+    
+
+    // calculate envelope muliplier 0.0-1.0
+    float env = (m_envLevel/65535.0);
+    
+    // NOTE
+    value = value + m_detune + lch->m_bend + lch->m_transpose + lch->m_fineTune/10.0;
+    if(CLogicalChannel::ENV2PITCH == lch->m_lfoDest) {
+      value = value + 12.0 * env;
+    }
     if(CLogicalChannel::LFO2PITCH == lch->m_lfoDest) {
-      note = n + m_detune + lch->m_bend + 12.0 * lch->m_lfo;
+      value = value + 12.0 * lch->m_lfo;
     }
-    else {
-      note = n + m_detune + lch->m_bend;
-    }
-    float freq = 440.0 * pow(2.0,((note-57.0)/12.0));
-    m_pch->pitch(freq);
+    value = 440.0 * pow(2.0,((value-57.0)/12.0));
+    m_pch->pitch(value);
 
-    float vol;   
+    // VOLUME
+    value = m_vol/127.0;
+    if(CLogicalChannel::ENV2VOL == lch->m_envDest) {   
+      value = value * env;
+    }
     if(CLogicalChannel::LFO2VOL == lch->m_lfoDest) {   
-      vol = 0.5 + 15.0 * lch->m_lfo_positive * m_vol * (m_envLevel/65535.0);
-    } else {
-      vol = 0.5 + 15.0 * m_vol * (m_envLevel/65535.0);
+      value = value * lch->m_lfo_positive;
     }
-    m_pch->vol(vol);
+    m_pch->vol(0.5 + 15 * value);
 
+    // HPF
+    value = lch->m_hpf/127.0;
+    if(CLogicalChannel::ENV2HPF == lch->m_envDest) {       
+      value = value * env;
+    }
     if(CLogicalChannel::LFO2HPF == lch->m_lfoDest) {       
-       m_pch->hpf_lev(1000.0 * lch->m_lfo_positive);
+      value = value * lch->m_lfo_positive;
     }
-    else if(CLogicalChannel::LFO2DIST == lch->m_lfoDest) {       
-       m_pch->dist_lev(127.0 * lch->m_lfo_positive);
+    m_pch->hpf_lev(1000.0 * value);    
+    
+    // DIST    
+    value = lch->m_dist/127.0;
+    if(CLogicalChannel::ENV2DIST == lch->m_lfoDest) {       
+       value = value * env;
     }
+    if(CLogicalChannel::LFO2DIST == lch->m_lfoDest) {       
+       value = value * lch->m_lfo_positive;
+    }
+    m_pch->dist_lev(127.0 * value);
   }
   else {
     m_pch->vol(0);
@@ -90,10 +111,13 @@ CLogicalChannel::CLogicalChannel()
   m_voiceCount = 0;
   m_bendRange = 3;
   m_bend = 0;
+  m_transpose = 0;
+  m_fineTune = 0;
   
   m_attack = 65535;
   m_release = 60;
-   
+  m_envDest = ENV2VOL;
+  
   m_portaLevel = 0;
   m_portaTarget = 0;
   m_portamento = 0.0;
@@ -104,7 +128,9 @@ CLogicalChannel::CLogicalChannel()
   m_lfoWave = LFO_SQ;
   m_lfoRun = RUN_GATE;
 
-  
+  m_hpf = 0;
+  m_dist = 0;
+
   m_lfoLevel = 127;
   m_lfo = 0;
   m_lfoDest = LFO2HPF;
@@ -345,6 +371,9 @@ void CLogicalChannel::tick()
   byte run;
   switch(m_lfoRun)
   {      
+    case RUN_HOLD:
+      run = 0;
+      break;
     case RUN_TRIG_GATE:
     case RUN_GATE:   
       run = !!m_noteCount;
@@ -358,14 +387,31 @@ void CLogicalChannel::tick()
       run = 1;
       break;
   }
+
+  int lfoLevel;
+  if((m_flags & FLAG_UNISON) && m_envDest == ENV2LFOLEVEL) {
+      lfoLevel = m_lfoLevel * (m_voices[0].m_envLevel/65535.0); 
+  }
+  else {
+    lfoLevel = m_lfoLevel;
+  }
   
   if(run) {
+    
+    int lfoStep;
+    if((m_flags & FLAG_UNISON) && m_envDest == ENV2LFORATE) {
+      lfoStep = m_lfoStep * (1.0 - m_voices[0].m_envLevel/65535.0); 
+    }
+    else {
+      lfoStep = m_lfoStep;
+    }
+    
     float lfo;
     switch(m_lfoWave) 
     {
       case LFO_TRI:  // TRIANGLE
       case LFO_SQ:   // SQUARE  
-        l = (long)m_lfoCount + (long)m_lfoStep;
+        l = (long)m_lfoCount + (long)lfoStep;
         if(l>32767) {
           m_lfoCount = 32767;
           m_lfoStep = -m_lfoStep;
@@ -385,13 +431,13 @@ void CLogicalChannel::tick()
       case LFO_RAMP:    // RAMP UP
       case LFO_REVRAMP:  // RAMP DOWN
         if(m_lfoWave == LFO_REVRAMP) {
-          l = (long)m_lfoCount - m_lfoStep;
+          l = (long)m_lfoCount - lfoStep;
           if(l<-32767) {
             l = 32767;
           }    
         }
         else {
-          l = (long)m_lfoCount + m_lfoStep;
+          l = (long)m_lfoCount + lfoStep;
           if(l>32767) {
             l = -32767;
           }    
@@ -403,7 +449,7 @@ void CLogicalChannel::tick()
       case LFO_RND2:      
         if(--m_lfoCount <= 0) {
           lfo = ((float)random(2000))/1000.0-1.0;        
-          m_lfoCount = (m_lfoWave == LFO_RND1) ? abs(m_lfoStep) : random(abs(m_lfoStep));
+          m_lfoCount = (m_lfoWave == LFO_RND1) ? abs(lfoStep) : random(abs(lfoStep));
         }
         else {
           run = 0;
@@ -413,12 +459,13 @@ void CLogicalChannel::tick()
          lfo = 0; 
          break;
     }
-    if(run) {
-      m_lfo = lfo * m_lfoLevel/127.0;
-      m_lfo_positive = (m_lfo + 1.0)/2.0;
-    }
+    m_lfo = lfo * lfoLevel/127.0;
   }
-  
+  else {
+    m_lfo = m_lfoCount * lfoLevel/127.0;
+  }
+  m_lfo_positive = fabs(m_lfo);
+    
   // Run Portamento
   if(m_portaLevel && m_portaTarget) {
     float d = m_portamento + m_portaStep;

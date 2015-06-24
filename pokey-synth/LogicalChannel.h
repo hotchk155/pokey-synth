@@ -68,44 +68,53 @@ public:
     LFO_RND2          // random levels, random rate
   };
   enum {
-    LFO2NONE,
-    LFO2VOL,
-    LFO2PITCH,
-    LFO2DIST,
-    LFO2HPF
-  };
-  enum {
+    RUN_HOLD,        // lfo not running
     RUN_FREE,        // lfo is free running
     RUN_TRIG,        // lfo restarts on trig and runs freely
     RUN_TRIG_GATE,   // lfo restarts on trig and stops on untrig
     RUN_GATE,        // lfo only runs when notes are held
     RUN_UNGATE       // lfo only runs when no notes are held
   };
+  enum {
+    ENV2NONE,
+    ENV2VOL,
+    ENV2PITCH,
+    ENV2DIST,
+    ENV2HPF,
+    ENV2LFORATE,
+    ENV2LFOLEVEL
+  };
+  enum {
+    LFO2NONE,
+    LFO2VOL,
+    LFO2PITCH,
+    LFO2DIST,
+    LFO2HPF
+  };
 
   byte            m_flags;
   byte            m_midiChannel;      // the midi channel for this logical channel;
-  byte            m_bendRange;        // pitch bend range
+  char            m_transpose;
+  char            m_fineTune;
+  char            m_bendRange;        // pitch bend range
   float           m_bend;             // pitch bend amount (MIDI note units)
+  char            m_hpf;
+  char            m_dist;
   
   unsigned int    m_attack;           // attack phase step (increment per ms of 0xFFFF max level)
   unsigned int    m_release;          // release phase step (increment per ms of 0xFFFF max level)
+  byte            m_envDest;          // lfo destination
   
   int             m_lfoCount;         // lfo counter value 0-65535  
   int             m_lfoStep;          // counts per ms (lfo freq);
   byte            m_lfoWave;          // lfo waveform
   byte            m_lfoDest;          // lfo destination
   byte            m_lfoRun;           // lfo run mode
-
+  
   char            m_lfoLevel;         // level of lfo output (0-127)
   float           m_lfo;              // lfo value -1.0 to +1.0 
   float           m_lfo_positive;     // lfo value 0.0 to +1.0 
       
-  //char            m_tremLevel;        // intensity of amplitude modulation (0-127)
-//  float           m_tremelo;          // amplitude modulation 0 to +1.0 (fraction of full amplitude)
-
-//  char            m_vibLevel;         // intensity of pitch modulation (0-127)
-//  float           m_vibrato;          // pitch modulation -12.0 to +12.0 (fractional midi notes)
-
   byte            m_portaLevel;      // portamento time for mono modes
   byte            m_portaTarget;     // target note for portamento
   float           m_portaStep;       // pitch step per ms
