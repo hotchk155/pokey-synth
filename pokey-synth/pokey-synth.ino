@@ -25,7 +25,7 @@ CPokeyChannel *Pokey2Channels[4] = {
 byte Pokey2NumChannels = 0;
 
 
-CLogicalChannel LogicalChannel1;
+CLogicalChannel LogicalChannel1(1);
 //CLogicalVoice LogicalVoice1;
 
 void setup()
@@ -55,17 +55,20 @@ void setup()
   digitalWrite(P_CS1, HIGH);
   digitalWrite(P_CS0, HIGH);
 
+  delay(100);
 
-  Pokey1NumChannels = Pokey1.configure(CPokey::MODE_8HPF, Pokey1Channels);
+  Pokey1NumChannels = Pokey1.configure(CPokey::MODE_8, Pokey1Channels);
   //  Pokey1.range(false);
   //Pokey1Channels[0]->pitch(300);
   //Pokey1Channels[0]->vol(255);
   //  LogicalVoice1.assign(Pokey1Channels[0]);
   //  LogicalVoice1.trig(61,127);
-  LogicalChannel1.init(2);
+  LogicalChannel1.init(4);
   LogicalChannel1.assign(0, Pokey1Channels[0]);
   LogicalChannel1.assign(1, Pokey1Channels[1]);
-  LogicalChannel1.detune(7);
+  LogicalChannel1.assign(2, Pokey1Channels[2]);
+  LogicalChannel1.assign(3, Pokey1Channels[3]);
+//  LogicalChannel1.assign(1, Pokey1Channels[1]);
 //  LogicalChannel1.assign(2, Pokey1Channels[1]);
 //  LogicalChannel1.assign(3, Pokey1Channels[1]);
 //  LogicalChannel1.assign(2, Pokey1Channels[2]);
@@ -80,21 +83,24 @@ void setup()
   //Serial.flush();
 }
 
-unsigned long lastTick = 0;
+byte lastTick = 0;
+byte ticks = 0;
 void loop() 
 {
   unsigned long ms = millis();
-  ControlPanel.run(ms);
+//  ControlPanel.run(ms);
 
   byte midi = MidiInput.read();
   if(midi)
   {
-    ControlPanel.pulse();
+  //  ControlPanel.pulse();
     LogicalChannel1.handle(midi, MidiInput.m_params);
   }
-  if(lastTick != ms) {
-    lastTick = ms;
-    LogicalChannel1.tick();
+  if(lastTick != (byte)ms) {
+    PORTC |= (1<<4);
+    LogicalChannel1.tick(ticks++);
+    PORTC &= ~(1<<4);
+    lastTick = (byte)ms;
   }
 }
 

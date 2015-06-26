@@ -58,6 +58,7 @@ public:
   byte hz_to_div8(float hz);
   unsigned int hz_to_div16(float hz);
   void test();
+  void range(byte v);
   
 };
 

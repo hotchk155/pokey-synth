@@ -160,6 +160,10 @@ void CPokeyChannel::hpf(int hz) {
 void CPokeyChannel::hpf_lev(byte lev) {
   hpf((lev&0x7F)*10);
 }
+///////////////////////////////////////////////////////////  
+void CPokeyChannel::range(byte v) {
+  m_pokey->range(v);
+}
 
 ///////////////////////////////////////////////////////////  
 //
@@ -274,46 +278,20 @@ void CPokey::write(byte addr, byte data)
   _DIGITAL_WRITE(P_DB5, !!(data&0x20));
   _DIGITAL_WRITE(P_DB6, !!(data&0x40));
   _DIGITAL_WRITE(P_DB7, !!(data&0x80));      
+  delayMicroseconds(10);
   if(m_which) {
     _DIGITAL_WRITE(P_CS1, LOW);
   }
   else {  
     _DIGITAL_WRITE(P_CS0, LOW);
   }
-  delayMicroseconds(100);
+  delayMicroseconds(10);
   if(m_which) {
     _DIGITAL_WRITE(P_CS1, HIGH);
   }
   else {  
     _DIGITAL_WRITE(P_CS0, HIGH);
   }
-  /*
-  digitalWrite(P_AD0, !!(addr&0x01));
-  digitalWrite(P_AD1, !!(addr&0x02));
-  digitalWrite(P_AD2, !!(addr&0x04));
-  digitalWrite(P_AD3, !!(addr&0x08));    
-  digitalWrite(P_DB0, !!(data&0x01));
-  digitalWrite(P_DB1, !!(data&0x02));
-  digitalWrite(P_DB2, !!(data&0x04));
-  digitalWrite(P_DB3, !!(data&0x08));
-  digitalWrite(P_DB4, !!(data&0x10));
-  digitalWrite(P_DB5, !!(data&0x20));
-  digitalWrite(P_DB6, !!(data&0x40));
-  digitalWrite(P_DB7, !!(data&0x80));      
-  if(m_which) {
-    digitalWrite(P_CS1, LOW);
-  }
-  else {  
-    digitalWrite(P_CS0, LOW);
-  }
-  delayMicroseconds(100);
-  if(m_which) {
-    digitalWrite(P_CS1, HIGH);
-  }
-  else {  
-    digitalWrite(P_CS0, HIGH);
-  }
-  */
 }    
 ///////////////////////////////////////////////////////////
 void CPokey::audctl(byte v) {
@@ -325,16 +303,19 @@ void CPokey::reset() {
   for(int i=0;i<16;++i) {
     write(i, 0);
   }
-  write(SKCTL, 3);
-  write(STIMER, 1);        
+  write(IRQEN,0);
 }
 ///////////////////////////////////////////////////////////
 void CPokey::range(byte v) {
   if(v) {
-    audctl(m_audctl & ~AUDCTL_DIVLOW);
+    if(m_audctl & AUDCTL_DIVLOW) {
+      audctl(m_audctl & ~AUDCTL_DIVLOW);
+    }
   } 
   else {    
-    audctl(m_audctl | AUDCTL_DIVLOW);
+    if(!(m_audctl & AUDCTL_DIVLOW)) {
+      audctl(m_audctl | AUDCTL_DIVLOW);
+    }
   }
 }
     
