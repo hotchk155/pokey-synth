@@ -1,12 +1,10 @@
 ///////////////////////////////////////////////////////////
-//
-// POKEYSYNTH 
+// POKEYPIG
 // hotchk155/2015
-//
 ///////////////////////////////////////////////////////////
 #include "Arduino.h"
+#include "Defs.h"
 #include "PortIO.h"
-#include "PokeySynth.h"
 #include "Pokey.h"
 
 ///////////////////////////////////////////////////////////  
@@ -175,7 +173,7 @@ void CPokeyChannel::range(byte v) {
 CPokey::CPokey(byte which) 
 {
   m_which = which;
-  m_mode = MODE_UNDEFINED;
+  m_mode = PCFG_NONE;
   m_audctl = 0;
   reset();
   
@@ -189,12 +187,13 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
   int i;
   for(i=0; i<4; ++i) {
     m_chan[i].reset();      
+    channels[i] = NULL;
   }
   switch(mode) {
-  case MODE_8:
-  case MODE_8L:
+  case PCFG_8:
+  case PCFG_8L:
     audctl(0);
-    range(MODE_8 == mode);
+    range(PCFG_8 == mode);
     for(i=0; i<4; ++i) {
       m_chan[i].mode(CPokeyChannel::CHAN_8);
       channels[i] = &m_chan[i];
@@ -202,10 +201,10 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 4;
-  case MODE_8HPF:
-  case MODE_8LHPF:
+  case PCFG_8HPF:
+  case PCFG_8LHPF:
     audctl(CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN3HPF);        
-    range(MODE_8HPF == mode);
+    range(PCFG_8HPF == mode);
     m_chan[0].mode(CPokeyChannel::CHAN_HPF);
     m_chan[2].mode(CPokeyChannel::CHAN_HPF);
     channels[0] = &m_chan[0];
@@ -213,10 +212,10 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 2;
-  case MODE_8_8HPF:
-  case MODE_8L_8LHPF:
+  case PCFG_8_8HPF:
+  case PCFG_8L_8LHPF:
     audctl(AUDCTL_CHAN3HPF);        
-    range(MODE_8_8HPF == mode);
+    range(PCFG_8_8HPF == mode);
     m_chan[0].mode(CPokeyChannel::CHAN_8);
     m_chan[1].mode(CPokeyChannel::CHAN_8);
     m_chan[2].mode(CPokeyChannel::CHAN_HPF);
@@ -226,10 +225,10 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 3;      
-  case MODE_8_8_16:  
-  case MODE_8L_8L_16:
+  case PCFG_8_8_16:  
+  case PCFG_8L_8L_16:
     audctl(CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
-    range(MODE_8_8_16 == mode);
+    range(PCFG_8_8_16 == mode);
     m_chan[0].mode(CPokeyChannel::CHAN_8);
     m_chan[1].mode(CPokeyChannel::CHAN_8);
     m_chan[3].mode(CPokeyChannel::CHAN_16);
@@ -239,10 +238,10 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 3;      
-  case MODE_8HPF_16: 
-  case MODE_8LHPF_16:
+  case PCFG_16_8HPF: 
+  case PCFG_16_8LHPF:
     audctl(CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
-    range(MODE_8HPF_16 == mode);
+    range(PCFG_16_8HPF == mode);
     m_chan[0].mode(CPokeyChannel::CHAN_HPF);
     m_chan[3].mode(CPokeyChannel::CHAN_16);
     channels[0] = &m_chan[0];
@@ -250,7 +249,7 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 2;      
-  case MODE_16:
+  case PCFG_16:
     audctl(CPokey::AUDCTL_CHAN1DIVSCASCADE | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN1NODIV | AUDCTL_CHAN3NODIV);        
     m_chan[1].mode(CPokeyChannel::CHAN_16);
     m_chan[3].mode(CPokeyChannel::CHAN_16);

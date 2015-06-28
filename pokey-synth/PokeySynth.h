@@ -1,29 +1,47 @@
 ///////////////////////////////////////////////////////////
-//
-// POKEYSYNTH 
+// POKEYPIG
 // hotchk155/2015
-//
 ///////////////////////////////////////////////////////////
-#define P_AD0  2
-#define P_AD1  3
-#define P_AD2  4
-#define P_AD3  5
+class CPokeySynth
+{
+  void defaultChannelConfig(char ch, CHANNEL_CONFIG *lc);
+  void defaultGlobalConfig(GLOBAL_CONFIG *cfg);
+  void loadGlobalConfig();
+public:  
 
-#define P_DB0  6
-#define P_DB1  7
-#define P_DB2  8
-#define P_DB3  9
-#define P_DB4  10
-#define P_DB5  11
-#define P_DB6  12
-#define P_DB7  13
+  // MIDI input manager
+  CMidiInput m_midiInput;
+  
+  // Control panel (buttons, LEDs) manager
+  CControlPanel m_controlPanel;    
 
-#define P_CS0    15
-#define P_CS1    14
-#define P_RW     16
+  // The following objects manage the POKEY devices
+  CPokey m_pokey1;
+  CPokey m_pokey2;
 
-#define P_LED1    18  
-#define P_LED2    19
+  // This is the list of logical voices. Each one is a 
+  // single "voice" that can be played by the synth, which
+  // in turn controls one or two physical POKEY channels, 
+  // depending on the mode the POKEY is configured in
+  CLogicalVoice  m_logicalVoices[8];
+  
+  // List of the 4 logical channels. Each logical channel
+  // controls a group of one or more logical voices as
+  // assigned to it when the global config is loaded
+  CLogicalChannel m_logicalChannels[NUM_LOGICAL_CHANNELS];
 
-#define NO_NOTE 0xFF
-#define OMNI    0xFF
+  // This structure contains the entire, currently active
+  // "patch" for the synth and is the data that is stored
+  // to EEPROM when patches are saved.
+  GLOBAL_CONFIG m_globalConfig;
+  
+  CPokeySynth();
+  void init();
+  void run();
+};
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
+

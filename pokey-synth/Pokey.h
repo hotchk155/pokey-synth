@@ -1,8 +1,6 @@
 ///////////////////////////////////////////////////////////
-//
-// POKEYSYNTH 
+// POKEYPIG
 // hotchk155/2015
-//
 ///////////////////////////////////////////////////////////
 
 class CPokey;
@@ -98,21 +96,20 @@ class CPokey {
       AUDCTL_CHAN1HPF          = 0x04,
       AUDCTL_CHAN3HPF          = 0x02,
       AUDCTL_DIVLOW            = 0x01
-
     };
     enum {
-      MODE_UNDEFINED,
-      MODE_8,        // supporting 4 channels with 8 bit divider
-      MODE_8L,       // supporting 4 channels with 8 bit divider (low range)
-      MODE_8HPF,     // supporting 2 channels with 8 bit divider and 8 bit HPF
-      MODE_8LHPF,    // supporting 2 channels with 8 bit divider and 8 bit HPF  (low range)
-      MODE_8_8HPF,   // supporting two 8-bit channels and one 8-bit channel with HPF
-      MODE_8L_8LHPF, // supporting two 8-bit channels and one 8-bit channel with HPF  (low range)
-      MODE_8_8_16,   // supporting two 8-bit and one 16 bit channel
-      MODE_8L_8L_16, // supporting two 8-bit and one 16 bit channel  (low range)
-      MODE_8HPF_16,  // supporting one 8-bit channel with HPF and one 16 bit channel      
-      MODE_8LHPF_16, // supporting one 8-bit channel with HPF and one 16 bit channel (low range)
-      MODE_16        // supporting two 16-bit channels
+      PCFG_NONE      = 0,
+      PCFG_8         = 1,   // supporting 4 channels with 8 bit divider
+      PCFG_16        = 2,   // supporting two 16-bit channels
+      PCFG_8_8_16    = 3,   // supporting two 8-bit and one 16 bit channel
+      PCFG_8HPF      = 4,   // supporting 2 channels with 8 bit divider and 8 bit HPF
+      PCFG_8_8HPF    = 5,   // supporting two 8-bit channels and one 8-bit channel with HPF
+      PCFG_16_8HPF   = 6,   // supporting one 8-bit channel with HPF and one 16 bit channel            
+      PCFG_8L        = 7,   // supporting 4 channels with 8 bit divider (low range)
+      PCFG_8L_8L_16  = 8,   // supporting two 8-bit and one 16 bit channel  (low range)
+      PCFG_8L_8LHPF  = 9,   // supporting two 8-bit channels and one 8-bit channel with HPF  (low range)
+      PCFG_8LHPF     = 10,  // supporting 2 channels with 8 bit divider and 8 bit HPF  (low range)
+      PCFG_16_8LHPF  = 11   // supporting one 8-bit channel with HPF and one 16 bit channel (low range)
     };
     enum {
       FLAG_LOWHZ             = 0x01  // Set dividers for 8 bit modes for low freq range

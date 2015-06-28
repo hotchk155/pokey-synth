@@ -1,8 +1,6 @@
 ///////////////////////////////////////////////////////////
-//
-// POKEYSYNTH 
+// POKEYPIG
 // hotchk155/2015
-//
 ///////////////////////////////////////////////////////////
 #define HEARTBEAT_PERIOD 20
 class CControlPanel {
@@ -25,4 +23,4 @@ public:
     }
   }
 };
-CControlPanel ControlPanel;
+
