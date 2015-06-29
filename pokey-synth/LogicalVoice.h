@@ -28,6 +28,7 @@ public:
   void range(byte v);
   void update();
   void reset();
+  void quiet();  
 };
 
 

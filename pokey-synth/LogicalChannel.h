@@ -62,15 +62,11 @@ public:
   byte ccMapValue(char value, int maxValue);
   void recalc_detune();
   void reset();
+  void quiet();
   void range(byte v);
   
 };
 
-typedef struct {
-  byte pokey1Mode;
-  byte pokey2Mode;
-  CHANNEL_CONFIG channel_config[NUM_LOGICAL_CHANNELS];
-} GLOBAL_CONFIG;
 
 
 

@@ -6,7 +6,8 @@ class CPokeySynth
 {
   void defaultChannelConfig(char ch, CHANNEL_CONFIG *lc);
   void defaultGlobalConfig(GLOBAL_CONFIG *cfg);
-  void loadGlobalConfig();
+  void configure();
+  void quiet();
 public:  
 
   // MIDI input manager
@@ -30,10 +31,14 @@ public:
   // assigned to it when the global config is loaded
   CLogicalChannel m_logicalChannels[NUM_LOGICAL_CHANNELS];
 
+  // EEPROM storage manager
+  CStorage m_storage;
+
   // This structure contains the entire, currently active
   // "patch" for the synth and is the data that is stored
   // to EEPROM when patches are saved.
   GLOBAL_CONFIG m_globalConfig;
+  
   
   CPokeySynth();
   void init();

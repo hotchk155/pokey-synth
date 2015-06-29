@@ -47,6 +47,7 @@ public:
   void configure(CPokey *pokey, byte div, byte ctrl, byte div2);
   void mode(byte mode);
   void reset();
+  void quiet();
   void dist(int mode);
   void pitch(float hz);
   void hpf_lev(byte lev);  
@@ -128,6 +129,7 @@ class CPokey {
     void write(byte addr, byte data);
     void audctl(byte v);
     void reset();
+    void quiet();
     void range(byte v);    
 };
 

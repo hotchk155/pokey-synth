@@ -5,9 +5,11 @@
 
 #include "Arduino.h"
 #include "PortIO.h"
+#include "EEPROM.h"
 #include "Defs.h"
 #include "MidiInput.h"
 #include "ControlPanel.h"
+#include "Storage.h"
 #include "Pokey.h"
 #include "LogicalVoice.h"
 #include "LogicalChannel.h"
@@ -60,7 +62,7 @@ void CPokeySynth::defaultGlobalConfig(GLOBAL_CONFIG *cfg)
   cfg->channel_config[0].req_channel[1] = 1;
   cfg->channel_config[0].req_channel[2] = 2;
   cfg->channel_config[0].req_channel[3] = 3; 
-  cfg->channel_config[0].req_channel[4] = 4; 
+  cfg->channel_config[0].req_channel[4] = -1; 
   cfg->channel_config[0].req_channel[5] = 5; 
   cfg->channel_config[0].req_channel[6] = 6; 
   cfg->channel_config[0].req_channel[7] = 7; 
@@ -69,10 +71,10 @@ void CPokeySynth::defaultGlobalConfig(GLOBAL_CONFIG *cfg)
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Configures the entire POKEY synth based on the content of the GlobalConfig
-void CPokeySynth::loadGlobalConfig() 
+void CPokeySynth::configure() 
 {
   int i;
-  
+
   // reset all the logical voices
   for(i=0; i<8; ++i) {
     m_logicalVoices[i].reset();
@@ -114,6 +116,19 @@ void CPokeySynth::loadGlobalConfig()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
+void CPokeySynth::quiet() 
+{
+  m_pokey1.quiet();
+  m_pokey2.quiet();
+  for(int i=0; i<8; ++i) {
+    m_logicalVoices[i].quiet();
+  }
+  for(int i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
+    m_logicalChannels[i].quiet();
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::init()
 {
   pinMode(P_AD0, OUTPUT);
@@ -136,51 +151,121 @@ void CPokeySynth::init()
 
   pinMode(P_LED1, OUTPUT);
   pinMode(P_LED2, OUTPUT);
+  pinMode(P_BUTTON, INPUT_PULLUP);
 
   digitalWrite(P_RW, LOW);
   digitalWrite(P_CS1, HIGH);
   digitalWrite(P_CS0, HIGH);
 
 
-  delay(100);
+  m_controlPanel.led1(1);
+  m_controlPanel.led2(1);  
+  delay(500);
 
-
-
-  defaultGlobalConfig(&m_globalConfig); 
-  loadGlobalConfig();
-
+  if(!m_storage.isInitialised()) {
+    defaultGlobalConfig(&m_globalConfig); 
+    for(int i=0; i<m_storage.getNumPatches(); ++i) {
+      m_storage.savePatch(i, &m_globalConfig);
+    }
+    m_storage.setCurrentPatch(0);
+    m_storage.setInitialised();
+    m_controlPanel.flashCode(5);    
+  }
+  else {
+    byte patch = m_storage.getCurrentPatch();
+    m_storage.loadPatch(patch, &m_globalConfig);
+  }
+  configure();
   m_midiInput.init();
+  m_controlPanel.led1(0);
+  m_controlPanel.led2(0);
+  
+
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 byte lastTick = 0;
 byte ticks = 0;
 byte voiceToUpdate = 0;
+byte wasHeld = 0;
 void CPokeySynth::run() 
 {
+  //m_pokey1.m_chan[0].test();
+//  return;
   int i;
   unsigned long ms = millis();
-//  m_controlPanel.run(ms);
-  digitalWrite(P_LED2, HIGH);
 
-  byte midi = m_midiInput.read();
-  if(midi)
-  {
-    for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-      m_logicalChannels[i].handle(midi, m_midiInput.m_params);
+  byte buttonHold = m_controlPanel.m_buttonHold;
+  if(lastTick != (byte)ms) {    
+    m_controlPanel.run();
+    switch(buttonHold) {
+      case CControlPanel::HOLD:
+        m_controlPanel.led1(1);      
+        wasHeld = 1;
+        break;
+      case CControlPanel::LONGHOLD:
+        m_controlPanel.led1(!!(ms & 0x40));
+        wasHeld = 2;
+        break;
+      default:
+        if(wasHeld) {
+          quiet();
+          if(wasHeld == 2) {
+            configure();
+          }
+          m_controlPanel.led1(0);
+          wasHeld = 0;
+        }    
+        break;
     }
-  }
-  if(lastTick != (byte)ms) {
-    PORTC |= (1<<4);
     m_logicalVoices[voiceToUpdate].update();
     for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
       m_logicalChannels[i].tick(ticks);
     }
-    PORTC &= ~(1<<4);
     voiceToUpdate = ((voiceToUpdate+1)&0x07);    
     ++ticks;
     lastTick = (byte)ms;
   }
+  
+  byte midi = m_midiInput.read();
+  if(midi)
+  {
+    if(buttonHold && ((midi & 0xF0) == 0x90) && m_midiInput.m_params[1]) {
+      char patch = m_midiInput.m_params[0] % 12;
+      if(patch >= 0 && patch < m_storage.getNumPatches()) {
+        switch(buttonHold) {
+          case CControlPanel::HOLD:
+            m_controlPanel.led1(1);
+            m_controlPanel.led2(1);
+            m_storage.loadPatch(patch, &m_globalConfig);
+            m_storage.setCurrentPatch(patch);
+            delay(200);
+            configure();
+            m_controlPanel.led1(0);
+            m_controlPanel.led2(0);
+            wasHeld = 0;            
+            break;
+          case CControlPanel::LONGHOLD:
+            m_controlPanel.led1(1);
+            m_controlPanel.led2(1);
+            m_storage.savePatch(patch, &m_globalConfig);
+            m_storage.setCurrentPatch(patch);
+            delay(500);
+            m_controlPanel.led1(0);
+            m_controlPanel.led2(0);
+            wasHeld = 0;            
+            break;
+        }
+      }
+    }
+    else {      
+      m_controlPanel.pulse();    
+      for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
+        m_logicalChannels[i].handle(midi, m_midiInput.m_params);
+      }
+    }
+  }  
 }
 
 

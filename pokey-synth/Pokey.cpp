@@ -44,14 +44,18 @@ void CPokeyChannel::mode(byte mode) {
 }
 ///////////////////////////////////////////////////////////  
 void CPokeyChannel::reset() {
+  m_ctrl = DIST_NONE;  
+  m_flags = FLAG_NODIV;
+  quiet();
+} 
+///////////////////////////////////////////////////////////  
+void CPokeyChannel::quiet() {
   m_pokey->write(m_div_reg, 0);
   m_pokey->write(m_ctrl_reg, 0);
   if(m_div2_reg != CPokey::NO_REG) {
     m_pokey->write(m_div2_reg, 0);
   }
-  m_ctrl = DIST_NONE;
-  m_flags = FLAG_NODIV;
-} 
+}
 ///////////////////////////////////////////////////////////  
 byte CPokeyChannel::hz_to_div8(float hz)
 {
@@ -304,6 +308,13 @@ void CPokey::reset() {
   }
   write(IRQEN,0);
 }
+///////////////////////////////////////////////////////////
+void CPokey::quiet() {
+  for(int i=0;i<4;++i) {
+    m_chan[i].quiet();
+  }
+}
+
 ///////////////////////////////////////////////////////////
 void CPokey::range(byte v) {
   if(v) {

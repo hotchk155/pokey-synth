@@ -18,6 +18,7 @@
 
 #define P_LED1    18  
 #define P_LED2    17
+#define P_BUTTON    19
 
 #define NO_NOTE 0xFF
 #define OMNI    0xFF
@@ -159,4 +160,10 @@ typedef struct {
   char            eLFODest;         // LFO modulation destination
 } CHANNEL_CONFIG;
 
+
+typedef struct {
+  byte pokey1Mode;
+  byte pokey2Mode;
+  CHANNEL_CONFIG channel_config[NUM_LOGICAL_CHANNELS];
+} GLOBAL_CONFIG;
 

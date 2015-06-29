@@ -2,24 +2,62 @@
 // POKEYPIG
 // hotchk155/2015
 ///////////////////////////////////////////////////////////
-#define HEARTBEAT_PERIOD 20
+#define PULSE_PERIOD 20
+#define HOLD_PERIOD 500
+#define LONGHOLD_PERIOD 5000
+
 class CControlPanel {
-  byte m_heartbeat;
-  unsigned long m_nextHeartbeat;
+  char m_endPulse;
+  unsigned int m_buttonPress;
 public:
+  byte m_buttonHold;
+  enum {
+      NOHOLD = 0,
+      HOLD,
+      LONGHOLD
+  };
   CControlPanel() {
-    m_heartbeat = 0;
-    m_nextHeartbeat = 0;
+    m_endPulse = 0;
+    m_buttonPress = 0;
+    m_buttonHold = NOHOLD;
   }
   void pulse() 
   {
-    digitalWrite(P_LED1, 1);
-    m_nextHeartbeat = millis() + HEARTBEAT_PERIOD;
+    digitalWrite(P_LED2, 1);
+    m_endPulse = PULSE_PERIOD;
   }
-  void run(unsigned long ms) {
-    if(m_nextHeartbeat && ms > m_nextHeartbeat) {
-      m_nextHeartbeat = 0;
+  byte run() {
+    if(m_endPulse) {
+      if(--m_endPulse == 0) {
+        digitalWrite(P_LED2, 0);
+      }
+    }
+    m_buttonHold = NOHOLD;
+    if(digitalRead(P_BUTTON)) {
+      m_buttonPress = 0;
+    }
+    else {
+      if(m_buttonPress > LONGHOLD_PERIOD)
+        m_buttonHold = LONGHOLD;
+      else if(++m_buttonPress > HOLD_PERIOD)
+        m_buttonHold = HOLD;
+      else
+        m_buttonHold = NOHOLD;
+    }
+  }
+  void led1(byte v) {
+    digitalWrite(P_LED1, !!v);
+  }
+  void led2(byte v) {
+    digitalWrite(P_LED2, !!v);
+  }
+  void flashCode(char count) 
+  {
+    while(count-- > 0) {
+      digitalWrite(P_LED1, 1);
+      delay(200);
       digitalWrite(P_LED1, 0);
+      delay(200);
     }
   }
 };
