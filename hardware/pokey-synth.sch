@@ -16632,7 +16632,7 @@ Source: www.kingbright.com</description>
 <part name="IC1" library="atmel" deviceset="MEGA8-P" device=""/>
 <part name="X1" library="crystal" deviceset="CRYSTAL" device="HC49U-V"/>
 <part name="R5" library="rcl" deviceset="R-EU_" device="0207/7"/>
-<part name="R7" library="rcl" deviceset="R-EU_" device="0207/7"/>
+<part name="R7" library="rcl" deviceset="R-EU_" device="0207/7" value="470"/>
 <part name="C4" library="rcl" deviceset="C-EU" device="025-024X044"/>
 <part name="C5" library="rcl" deviceset="C-EU" device="025-024X044"/>
 <part name="C8" library="rcl" deviceset="C-EU" device="025-024X044"/>
@@ -16643,7 +16643,7 @@ Source: www.kingbright.com</description>
 <part name="C7" library="rcl" deviceset="C-EU" device="025-024X044"/>
 <part name="C6" library="rcl" deviceset="C-EU" device="025-024X044"/>
 <part name="IC4" library="optocoupler" deviceset="6N138" device=""/>
-<part name="R6" library="rcl" deviceset="R-EU_" device="0207/7"/>
+<part name="R6" library="rcl" deviceset="R-EU_" device="0207/7" value="470"/>
 <part name="LEVELA" library="jasons_stuff" deviceset="ALPS_POT_SMALL" device=""/>
 <part name="C2" library="rcl" deviceset="CPOL-EU" device="E2-5"/>
 <part name="C1" library="rcl" deviceset="CPOL-EU" device="E2-5"/>
@@ -17419,22 +17419,11 @@ Source: www.kingbright.com</description>
 <junction x="205.74" y="220.98"/>
 <junction x="210.82" y="220.98"/>
 <junction x="210.82" y="218.44"/>
-</segment>
-</net>
-<net name="N$6" class="0">
-<segment>
-<pinref part="OUT_A/MIX" gate="G$1" pin="RING"/>
-<wire x1="210.82" y1="215.9" x2="205.74" y2="215.9" width="0.1524" layer="91"/>
-<wire x1="205.74" y1="215.9" x2="205.74" y2="213.36" width="0.1524" layer="91"/>
-<pinref part="OUT_A/MIX" gate="G$1" pin="RING_NC"/>
-<wire x1="205.74" y1="213.36" x2="210.82" y2="213.36" width="0.1524" layer="91"/>
 <pinref part="OUT_B" gate="G$1" pin="TIP_NC"/>
 <wire x1="210.82" y1="157.48" x2="205.74" y2="157.48" width="0.1524" layer="91"/>
-<wire x1="205.74" y1="157.48" x2="205.74" y2="213.36" width="0.1524" layer="91"/>
-<junction x="205.74" y="213.36"/>
-<junction x="210.82" y="215.9"/>
-<junction x="210.82" y="213.36"/>
+<wire x1="205.74" y1="157.48" x2="205.74" y2="218.44" width="0.1524" layer="91"/>
 <junction x="210.82" y="157.48"/>
+<junction x="205.74" y="218.44"/>
 </segment>
 </net>
 <net name="N$7" class="0">

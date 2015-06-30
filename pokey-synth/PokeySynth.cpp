@@ -179,9 +179,6 @@ void CPokeySynth::init()
   m_midiInput.init();
   m_controlPanel.led1(0);
   m_controlPanel.led2(0);
-  
-
-  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -220,10 +217,26 @@ void CPokeySynth::run()
         break;
     }
     m_logicalVoices[voiceToUpdate].update();
-    for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-      m_logicalChannels[i].tick(ticks);
-    }
     voiceToUpdate = ((voiceToUpdate+1)&0x07);    
+    for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
+      switch(ticks & 0x7) {
+        case 0: 
+          m_logicalChannels[i].runEnvelopes();
+          break;
+        case 1: 
+          m_logicalChannels[i].runLFO();
+          break;
+        case 2: 
+          m_logicalChannels[i].runPortamento();
+          break;
+        case 3: 
+          m_logicalChannels[i].runDetune();
+          break;
+        case 4: 
+          m_logicalChannels[i].runArpeggiator();
+          break;
+      }
+    }
     ++ticks;
     lastTick = (byte)ms;
   }

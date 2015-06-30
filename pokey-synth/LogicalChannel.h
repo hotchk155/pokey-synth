@@ -64,6 +64,11 @@ public:
   void reset();
   void quiet();
   void range(byte v);
+  void runEnvelopes();
+  void runLFO(); 
+  void runPortamento(); 
+  void runDetune(); 
+  void runArpeggiator(); 
   
 };
 

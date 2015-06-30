@@ -420,36 +420,9 @@ void CLogicalChannel::recalc_detune()
   }
 }
 
-
 ///////////////////////////////////////////////////////////////////////
-// TICK
-// called once per millisecond... manages tremelo, vibrato, A/R envelope
-void CLogicalChannel::tick(byte counter) 
+void CLogicalChannel::runEnvelopes() 
 {
-  CLogicalVoice *voice;
-
-  // Every voice has its own envelope, so envelope modulation
-  // will only be effective in unison mode where all the envelopes
-  // are the same
-  float fEnvelope;
-  if(m_conf->flags & CF_UNISON) {
-    fEnvelope = m_voices[0].m_fEnvelope;
-  }
-  else {
-    fEnvelope = 1.0;
-  }
-
-  // the various channel state machines run on different phases 
-  // of the tick counter, and each at 8ms intervals
-  switch(counter & 0x07)
-  {
-    /////////////////////////////////////////////
-    //
-    // ENVELOPE
-    //
-    /////////////////////////////////////////////  
-  case 0:
-    // precalculate envelope increments
     for(int i=0; i<m_voiceCount; ++i) {       
       switch(m_voices[i].m_eEnvelopePhase) {                // ATTACK!!
         case CLogicalVoice::ENV_ATTACK:
@@ -474,15 +447,11 @@ void CLogicalChannel::tick(byte counter)
         break;
       }
     }
-    break;
-    /////////////////////////////////////////////  
+}
 
-    /////////////////////////////////////////////
-    //
-    // Run LFO  
-    //
-    /////////////////////////////////////////////  
-  case 1:          
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::runLFO() 
+{
     // work out if the LFO counter should be running
     byte lfoRun;
     switch(m_conf->eLFOMode)
@@ -507,10 +476,13 @@ void CLogicalChannel::tick(byte counter)
       break;
     }    
     if(lfoRun) {        
+           
       // Modulation of the LFO rate
       float fLFOStep = m_conf->fLFOStep;
       if(m_conf->eEnvelopeDest == ENV2LFORATE) {
-        fLFOStep *= fEnvelope;
+        if(m_conf->flags & CF_UNISON) {
+          fLFOStep *= m_voices[0].m_fEnvelope;
+        }
       }
       if(m_conf->eModWheelDest == MOD2LFORATE) {
         fLFOStep *= m_fModWheel;
@@ -556,7 +528,9 @@ void CLogicalChannel::tick(byte counter)
     }      
     m_fLFO *= m_conf->fLFOLevel;
     if(m_conf->eEnvelopeDest == ENV2LFOLEVEL) {
-      m_fLFO *= fEnvelope;
+      if(m_conf->flags & CF_UNISON) {
+        m_fLFO *= m_voices[0].m_fEnvelope;
+      }
     }
     if(m_conf->eModWheelDest == MOD2LFOLEVEL) {
       m_fLFO *= m_fModWheel;
@@ -564,17 +538,11 @@ void CLogicalChannel::tick(byte counter)
 
     // calculate bipolar LFO
     m_fLFOBipolar = (2.0*m_fLFO)-1.0;
-    break;
-    /////////////////////////////////////////////
+}
 
-    /////////////////////////////////////////////
-    //
-    // Run Portamento
-    //
-    /////////////////////////////////////////////  
-  case 2:
-
-    // Run Portamento
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::runPortamento() 
+{
     if((m_conf->flags & CF_PORTAMENTO) && m_portaTargetNote) {
       float d = m_fPortamentoNote + m_fPortaStep;
       if(m_fPortamentoNote > m_portaTargetNote && d < m_portaTargetNote) {
@@ -589,15 +557,11 @@ void CLogicalChannel::tick(byte counter)
         m_fPortamentoNote = d;
       }
     }
-    break;
-    /////////////////////////////////////////////
+}
 
-    /////////////////////////////////////////////
-    //
-    // DETUNE STEP RECALCULATION
-    //
-    /////////////////////////////////////////////  
-  case 3:
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::runDetune() 
+{
     switch(m_conf->eDetuneMode) {
     case DETUNE_FINE:  // 10 cents
       m_fDetuneStep = m_conf->detuneLevel/10.0;
@@ -616,19 +580,18 @@ void CLogicalChannel::tick(byte counter)
       m_fDetuneStep *= m_fModWheel;
     }
     if(m_conf->eEnvelopeDest == ENV2DETUNE) {
-      m_fDetuneStep *= fEnvelope;
+      if(m_conf->flags & CF_UNISON) {
+        m_fDetuneStep *= m_voices[0].m_fEnvelope;
+      }
     }
     if(m_conf->eLFODest == LFO2DETUNE) {
       m_fDetuneStep *= m_fLFO;
     }
-    break;
+}
 
-    /////////////////////////////////////////////
-    //
-    // ARPEGGIATOR
-    //
-    /////////////////////////////////////////////  
-  case 4:  
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::runArpeggiator() 
+{
     if((m_conf->flags & CF_ARPEGGIATE) && (m_noteCount > 0)) {
       if(--m_arpCounter <= 0)
       {          
@@ -651,8 +614,6 @@ void CLogicalChannel::tick(byte counter)
         m_arpCounter = m_conf->arpPeriod;
       }
     }
-    break;    
-  }
 }
 
 
