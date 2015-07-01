@@ -87,7 +87,7 @@ void CLogicalVoice::update()
     value = m_note;
   }
   // NOTE
-  value = value + (m_detuneFactor * m_lch->m_fDetuneStep) + m_lch->m_fPitchBend + conf->transpose + conf->fineTune;
+  value = value + (m_detuneFactor * m_lch->m_fDetuneStep) + m_lch->m_fPitchBend + conf->transpose + conf->fFineTune;
   if(ENV2PITCH == conf->eLFODest) {
     value = value + 12.0 * m_fEnvelope;
   }

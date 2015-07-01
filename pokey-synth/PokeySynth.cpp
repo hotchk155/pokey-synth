@@ -19,38 +19,44 @@
 ///////////////////////////////////////////////////////////////////////////////////
 CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
 {
+  m_dualPatch = 0;
+  m_voiceCount = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void CPokeySynth::defaultChannelConfig(char ch, CHANNEL_CONFIG *lc) 
+void CPokeySynth::defaultChannelConfig(CHANNEL_CONFIG *conf) 
 {
-  lc->req_channel[0] = -1;
-  lc->flags = CF_FULLVELOCITY|CF_OMNINOTES|CF_OMNICC;  
-  lc->midiChannel = ch;
-  lc->trigMin = 0;
-  lc->trigMax = 127;
-  lc->transpose = 0;
-  lc->fineTune = 0; 
-  lc->pitchBendRange = 2;
-  lc->portaTime = 0;
-  lc->detuneLevel = 0;
-  lc->eDetuneMode = 0;
-  lc->hpf = 0;
-  lc->dist = 127;
-  lc->eLFOMode = RUN_FREE;
-  lc->fLFOStep = 0.0625;
-  lc->fLFOLevel = 1.0;
-  lc->eLFOWave = LFO_TRI;
-  lc->fAttackStep = 1.0;
-  lc->fReleaseStep = 1.0;
-  lc->arpPeriod = 20;
-  lc->arpCount = 8;  
-  lc->eModWheelDest = MOD2DIST;
-  lc->eEnvelopeDest = ENV2VOL;
-  lc->eLFODest = LFO2NONE;
+  conf->ePokey1Mode = CPokey::PCFG_8;
+  conf->ePokey2Mode = CPokey::PCFG_NONE;
+  
+  //lc->req_channel[0] = -1;
+  conf->flags = CF_FULLVELOCITY; //|CF_OMNINOTES|CF_OMNICC;  
+//  lc->midiChannel = ch;
+//  lc->trigMin = 0;
+//  lc->trigMax = 127;
+  conf->transpose = 0;
+  conf->fFineTune = 0.0; 
+  conf->pitchBendRange = 2;
+  conf->portaTime = 0;
+  conf->detuneLevel = 0;
+  conf->eDetuneMode = 0;
+  conf->hpf = 0;
+  conf->dist = 127;
+  conf->eLFOMode = RUN_FREE;
+  conf->fLFOStep = 0.0625;
+  conf->fLFOLevel = 1.0;
+  conf->eLFOWave = LFO_TRI;
+  conf->fAttackStep = 1.0;
+  conf->fReleaseStep = 1.0;
+  conf->arpPeriod = 20;
+  conf->arpCount = 8;  
+  conf->eModWheelDest = MOD2DIST;
+  conf->eEnvelopeDest = ENV2VOL;
+  conf->eLFODest = LFO2NONE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
+/*
 void CPokeySynth::defaultGlobalConfig(GLOBAL_CONFIG *cfg) 
 {
   cfg->pokey1Mode = CPokey::PCFG_8;
@@ -68,7 +74,9 @@ void CPokeySynth::defaultGlobalConfig(GLOBAL_CONFIG *cfg)
   cfg->channel_config[0].req_channel[7] = 7; 
 //  cfg->channel_config[0].req_channel[4] = -1; 
 }
+*/
 
+/*
 ///////////////////////////////////////////////////////////////////////////////////
 // Configures the entire POKEY synth based on the content of the GlobalConfig
 void CPokeySynth::configure() 
@@ -114,6 +122,55 @@ void CPokeySynth::configure()
     m_logicalChannels[i].assign(&m_logicalVoices[first_voice_for_channel], num_voices_for_channel, conf);
   }
 }
+*/
+
+///////////////////////////////////////////////////////////////////////////////////
+// Configures the synth based on the loaded patches
+void CPokeySynth::configure() 
+{
+  int i;
+
+  // reset the voices
+  for(i=0; i<8; ++i) {
+    m_voice[i].reset();
+  }  
+  // reset the channels
+  m_chan[0].reset();
+  m_chan[1].reset();
+
+
+  int voices1 = 0;
+  int voices2 = 0;
+  CPokeyChannel *physical_channels[8] = {0};
+  m_dualPatch = 0;
+    
+  // Configure POKEY1
+  voices1 = m_pokey1.configure(m_conf[0].ePokey1Mode, &physical_channels[0]);
+  if(m_conf[0].ePokey2Mode != CPokey::PCFG_NONE) {
+    // first patch requires both chips
+    voices1 += m_pokey2.configure(m_conf[0].ePokey1Mode, &physical_channels[voices1]);
+    m_chan[0].assign(&m_voice[0], voices1, &m_conf[0]);
+  }
+  else {
+    // can have two patches loaded
+    voices2 = m_pokey2.configure(m_conf[1].ePokey1Mode, &physical_channels[voices1]);
+    m_chan[0].assign(&m_voice[0], voices1, &m_conf[0]);
+    if(voices2) {
+      m_chan[1].assign(&m_voice[voices1], voices2, &m_conf[1]);
+      m_dualPatch = 1;
+    }
+  }
+  m_voiceCount = 0;  
+  for(int i=0; i<voices1; ++i) {
+      m_voice[m_voiceCount++].assign(&m_chan[0], physical_channels[i]);      
+  }  
+  for(int i=voices1; i<voices1+voices2; ++i) {
+      m_voice[m_voiceCount++].assign(&m_chan[1], physical_channels[i]);      
+  }    
+  
+  m_controlPanel.flashCode(m_voiceCount);
+//  m_controlPanel.led2(1);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::quiet() 
@@ -121,10 +178,10 @@ void CPokeySynth::quiet()
   m_pokey1.quiet();
   m_pokey2.quiet();
   for(int i=0; i<8; ++i) {
-    m_logicalVoices[i].quiet();
+    m_voice[i].quiet();
   }
   for(int i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-    m_logicalChannels[i].quiet();
+    m_chan[i].quiet();
   }
 }
 
@@ -158,10 +215,11 @@ void CPokeySynth::init()
   digitalWrite(P_CS0, HIGH);
 
 
-  m_controlPanel.led1(1);
-  m_controlPanel.led2(1);  
-  delay(500);
+//  m_controlPanel.led1(1);
+//  m_controlPanel.led2(1);  
+//  delay(500);
 
+/*
   if(!m_storage.isInitialised()) {
     defaultGlobalConfig(&m_globalConfig); 
     for(int i=0; i<m_storage.getNumPatches(); ++i) {
@@ -174,8 +232,13 @@ void CPokeySynth::init()
   else {
     byte patch = m_storage.getCurrentPatch();
     m_storage.loadPatch(patch, &m_globalConfig);
-  }
+  }*/
+  defaultChannelConfig(&m_conf[0]);
+  m_conf[1].ePokey1Mode = CPokey::PCFG_NONE;
+  m_conf[1].ePokey2Mode = CPokey::PCFG_NONE;
+  
   configure();
+  delay(500);
   m_midiInput.init();
   m_controlPanel.led1(0);
   m_controlPanel.led2(0);
@@ -196,6 +259,7 @@ void CPokeySynth::run()
   byte buttonHold = m_controlPanel.m_buttonHold;
   if(lastTick != (byte)ms) {    
     m_controlPanel.run();
+    /*
     switch(buttonHold) {
       case CControlPanel::HOLD:
         m_controlPanel.led1(1);      
@@ -216,27 +280,13 @@ void CPokeySynth::run()
         }    
         break;
     }
-    m_logicalVoices[voiceToUpdate].update();
-    voiceToUpdate = ((voiceToUpdate+1)&0x07);    
-    for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-      switch(ticks & 0x7) {
-        case 0: 
-          m_logicalChannels[i].runEnvelopes();
-          break;
-        case 1: 
-          m_logicalChannels[i].runLFO();
-          break;
-        case 2: 
-          m_logicalChannels[i].runPortamento();
-          break;
-        case 3: 
-          m_logicalChannels[i].runDetune();
-          break;
-        case 4: 
-          m_logicalChannels[i].runArpeggiator();
-          break;
-      }
+    */
+    m_voice[voiceToUpdate].update();
+    if(++voiceToUpdate >= m_voiceCount) {
+      voiceToUpdate = 0;
     }
+    m_chan[0].run(ticks);
+    if(m_dualPatch) m_chan[1].run(ticks);
     ++ticks;
     lastTick = (byte)ms;
   }
@@ -244,6 +294,16 @@ void CPokeySynth::run()
   byte midi = m_midiInput.read();
   if(midi)
   {
+    if((midi & 0x0F) == 0) {
+      m_chan[0].handle(midi, m_midiInput.m_params);
+      m_controlPanel.pulse();    
+    }
+    else if(((midi & 0x0F) == 1) && m_dualPatch)
+      m_chan[1].handle(midi, m_midiInput.m_params);
+      m_controlPanel.pulse();    
+    }
+    
+    /*
     if(buttonHold && ((midi & 0xF0) == 0x90) && m_midiInput.m_params[1]) {
       char patch = m_midiInput.m_params[0] % 12;
       if(patch >= 0 && patch < m_storage.getNumPatches()) {
@@ -278,7 +338,7 @@ void CPokeySynth::run()
         m_logicalChannels[i].handle(midi, m_midiInput.m_params);
       }
     }
-  }  
+    */
 }
 
 

@@ -19,6 +19,11 @@ protected:
   NOTE m_notes[MAX_NOTES];
   byte m_noteCount;
   
+  void runEnvelopes();
+  void runLFO(); 
+  void runPortamento(); 
+  void runDetune(); 
+  void runArpeggiator(); 
     
 public:  
   enum {
@@ -64,11 +69,7 @@ public:
   void reset();
   void quiet();
   void range(byte v);
-  void runEnvelopes();
-  void runLFO(); 
-  void runPortamento(); 
-  void runDetune(); 
-  void runArpeggiator(); 
+  void run(byte ticks);
   
 };
 

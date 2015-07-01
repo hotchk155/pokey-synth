@@ -4,12 +4,12 @@
 ///////////////////////////////////////////////////////////
 class CPokeySynth
 {
-  void defaultChannelConfig(char ch, CHANNEL_CONFIG *lc);
-  void defaultGlobalConfig(GLOBAL_CONFIG *cfg);
+  void defaultChannelConfig(CHANNEL_CONFIG *conf);
+//  void defaultGlobalConfig(GLOBAL_CONFIG *cfg);
   void configure();
   void quiet();
 public:  
-
+  
   // MIDI input manager
   CMidiInput m_midiInput;
   
@@ -20,16 +20,13 @@ public:
   CPokey m_pokey1;
   CPokey m_pokey2;
 
-  // This is the list of logical voices. Each one is a 
-  // single "voice" that can be played by the synth, which
-  // in turn controls one or two physical POKEY channels, 
-  // depending on the mode the POKEY is configured in
-  CLogicalVoice  m_logicalVoices[8];
+  CLogicalVoice  m_voice[8];
+  byte m_voiceCount;
   
-  // List of the 4 logical channels. Each logical channel
-  // controls a group of one or more logical voices as
-  // assigned to it when the global config is loaded
-  CLogicalChannel m_logicalChannels[NUM_LOGICAL_CHANNELS];
+  CHANNEL_CONFIG m_conf[2];
+  CLogicalChannel m_chan[2];
+  
+  byte m_dualPatch;   // whether m_chan[1] has a separate patch
 
   // EEPROM storage manager
   CStorage m_storage;
@@ -37,7 +34,7 @@ public:
   // This structure contains the entire, currently active
   // "patch" for the synth and is the data that is stored
   // to EEPROM when patches are saved.
-  GLOBAL_CONFIG m_globalConfig;
+  //GLOBAL_CONFIG m_globalConfig;
   
   
   CPokeySynth();

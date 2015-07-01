@@ -30,8 +30,8 @@
     CF_FULLVELOCITY = 0x01,
     CF_UNISON       = 0x02,      // when this flag is set, all available voices play in unison
     CF_ARPEGGIATE   = 0x04,      // when this flag is set, all held notes are played sequentially
-    CF_OMNINOTES    = 0x08,
-    CF_OMNICC       = 0x10,
+//    CF_OMNINOTES    = 0x08,
+//    CF_OMNICC       = 0x10,
     CF_PORTAMENTO   = 0x80,
     CF_ENVLOOP      = 0x100
   };
@@ -130,17 +130,21 @@
     CC_DIST       =51    
   };
 
-
 typedef struct {
-   
-  char            req_channel[8];           // physical channel indexes assigned (-1 to fill)  
+
+  byte ePokey1Mode;
+  byte ePokey2Mode;
+  
+  //char            req_channel[8];           // physical channel indexes assigned (-1 to fill)  
   // CC Values
-  char            midiChannel;      // the midi channel for this logical channel;
+//  char            midiChannel;      // the midi channel for this logical channel;
+//  char            trigMin;          // lowest MIDI note that the channel responds to 
+//  char            trigMax;          // highest MIDI note that the channel responds to 
+  
+  
   unsigned int    flags;            // bit flags
-  char            trigMin;          // lowest MIDI note that the channel responds to 
-  char            trigMax;          // highest MIDI note that the channel responds to 
   char            transpose;        // semitone offset -63 to +63 (semitones)
-  float           fineTune;         // fine tune offset (semitones)  
+  float           fFineTune;         // fine tune offset (semitones)  
   char            pitchBendRange;   // pitch bend range (semitones)
   char            portaTime;        // portamento time
   char            detuneLevel;      // detune level -63 to +63 (units depend on mode)
@@ -160,10 +164,11 @@ typedef struct {
   char            eLFODest;         // LFO modulation destination
 } CHANNEL_CONFIG;
 
+/*
 
 typedef struct {
   byte pokey1Mode;
   byte pokey2Mode;
   CHANNEL_CONFIG channel_config[NUM_LOGICAL_CHANNELS];
 } GLOBAL_CONFIG;
-
+*/

@@ -44,7 +44,7 @@ public:
     byte v = EEPROM.read(EEADDR_CURRENT_PATCH);
     return constrain(v,0,EEPROM_NUM_PATCHES-1);
   }
-
+/*
   ///////////////////////////////////////////////////////////
   void savePatch(int index, GLOBAL_CONFIG *block) {
     if(index < 0 || index >= EEPROM_NUM_PATCHES)
@@ -63,5 +63,5 @@ public:
     for(int i=0; i<sizeof(GLOBAL_CONFIG); ++i) {
       ((byte*)block)[i] = EEPROM.read(addr++);      
     }    
-  }
+  }*/
 };

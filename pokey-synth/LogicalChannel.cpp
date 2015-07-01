@@ -82,31 +82,20 @@ void CLogicalChannel::handle(byte status, byte *params)
   case 0x80:
   case 0x90:
     if(cmd == 0x80 || cmd == 0x90) {
-      if((status & 0x0F) == m_conf->midiChannel || (m_conf->flags & CF_OMNINOTES)) {
-        //          if(params[1] >= m_trigMin && params[1] <= m_trigMax) {
-        if(cmd == 0x80 || params[1] == 0x00) {
-          handleNoteOff(params[0]);
-        }
-        else {
-          handleNoteOn(params[0], params[1]);
-        }        
-        //        }
+      if(cmd == 0x80 || params[1] == 0x00) {
+        handleNoteOff(params[0]);
       }
+      else {
+        handleNoteOn(params[0], params[1]);
+      }        
     }
     break;
   case 0xB0: 
-    if(((params[1] != CC_OMNI) && (m_conf->flags & CF_OMNICC)) || 
-      ((status & 0x0F) == m_conf->midiChannel) ) {
-      handleCC(params[0], params[1]);
-    }      
+    handleCC(params[0], params[1]);
     break;
   case 0xE0: 
-    {
-      if((status & 0x0F) == m_conf->midiChannel || (m_conf->flags & CF_OMNINOTES)) {
-        handlePitchBend(params[0], params[1]);
-      }      
-      break;
-    }
+    handlePitchBend(params[0], params[1]);
+    break;
   }    
 }
 ///////////////////////////////////////////////////////////////////////
@@ -159,6 +148,7 @@ void CLogicalChannel::handlePitchBend(byte lo, byte hi)
 }  
 
 ///////////////////////////////////////////////////////////////////////
+/*
 void CLogicalChannel::ccOmni(char value) {
   m_conf->flags &= ~(CF_OMNINOTES|CF_OMNICC);
   if(value < 32) {
@@ -173,7 +163,7 @@ void CLogicalChannel::ccOmni(char value) {
     m_conf->flags |= CF_OMNINOTES|CF_OMNICC;
   }
 }
-
+*/
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::ccFlag(int flag, char value) {
   if(value < 64)
@@ -191,9 +181,9 @@ byte CLogicalChannel::ccMapValue(char value, int maxValue) {
 void CLogicalChannel::handleCC(char cc, char value)
 {
   switch(cc) {    
-  case CC_OMNI: 
-    ccOmni(value); 
-    break;        
+//  case CC_OMNI: 
+//    ccOmni(value); 
+//    break;        
   case CC_MIDIVEL: 
     ccFlag(CF_FULLVELOCITY, value); 
     break;
@@ -206,17 +196,17 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MOD:  
     m_fModWheel = (float)value/127; 
     break;
-  case CC_TRIGMIN: 
-    m_conf->trigMin = value; 
-    break;
-  case CC_TRIGMAX: 
-    m_conf->trigMax = value; 
-    break;
+//  case CC_TRIGMIN: 
+//    m_conf->trigMin = value; 
+//    break;
+//  case CC_TRIGMAX: 
+//    m_conf->trigMax = value; 
+//    break;
   case CC_TRANSPOSE: 
     m_conf->transpose = value - 64; 
     break;
   case CC_FINETUNE: 
-    m_conf->fineTune = ((float)value - 64)/10.0; 
+    m_conf->fFineTune = ((float)value - 64)/10.0; 
     break;
   case CC_ARPRATE: 
     m_conf->arpPeriod = 127-value; 
@@ -617,4 +607,19 @@ void CLogicalChannel::runArpeggiator()
 }
 
 
+void CLogicalChannel::run(byte ticks)  
+{
+    switch(ticks & 0x7) {
+      case 0: runEnvelopes(); 
+        break;
+      case 1: runLFO();
+        break;
+      case 2: runPortamento();
+        break;
+      case 3: runDetune();
+        break;
+      case 4: runArpeggiator();
+        break;
+    }
+}
 
