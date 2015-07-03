@@ -18,6 +18,11 @@
 
 
 ///////////////////////////////////////////////////////////////////////
+inline float envStep(char v) {
+  return 1.0/((float)v+1);
+}
+
+///////////////////////////////////////////////////////////////////////
 inline void trigEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
   envState->ePhase = ENVELOPE_STATE::ATTACK;    
   envState->fValue = 0;
@@ -34,7 +39,7 @@ inline void untrigEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
 }
 
 ///////////////////////////////////////////////////////////////////////
-inline void runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
+inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
   switch(envState->ePhase) {               
     case ENVELOPE_STATE::ATTACK:
         envState->fValue += env->fAttackStep;
@@ -56,9 +61,9 @@ inline void runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
               break;
           }
         }
-        break;  
+        break;
     case ENVELOPE_STATE::RELEASE:
-        envState->fValue -= env->fAttackStep;
+        envState->fValue -= env->fReleaseStep;
         if(envState->fValue <= 0.0) {
           envState->fValue = 0.0;
           // reached end of release phase... what happens next depends on mode
@@ -75,8 +80,9 @@ inline void runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
               break;
           }
         }
-        break;
+        break; 
       }
+      return envState->ePhase;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -125,21 +131,6 @@ void CLogicalChannel::quiet() {
 }
 
 
-///////////////////////////////////////////////////////////////////////
-// DELETE NOTE FROM NOTE STACK
-byte CLogicalChannel::deleteNote(byte note) {
-  for(int i=0; i<m_noteCount; ++i) {
-    if(m_notes[i].note == note) {
-      // remove it
-      --m_noteCount;
-      for(;i<m_noteCount;++i) {
-        m_notes[i] = m_notes[i+1];
-      }
-      return 1;
-    }
-  }      
-  return 0;
-}  
 
 
 
@@ -196,25 +187,38 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
   }
 
   CLogicalVoice *voice = NULL;
-  if(m_conf->portaTime) {
-    m_portaTargetNote = note;
-    if(m_fPortamentoNote > 0) {  
-      m_fPortaStep = (note - m_fPortamentoNote) / (m_conf->portaTime * 10.0);
-      note = m_fPortamentoNote;
-    }
-    else {
-      m_fPortamentoNote = note;
-      m_fPortaStep = 1.0;
-    }
-  }
 
   if(m_conf->flags & (TONE_CONFIG::UNISON|TONE_CONFIG::ARPEGGIATE))
   {
-    float n = note;
+    // check if a nonzero portamento setting is defined
+    if(m_conf->portaTime) {
+      
+      // store trigggered note as the target of the portamento engine
+      m_portaTargetNote = note;
+      
+      // is there a previous note to use as start point?
+      if(m_fPortamentoNote > 0 && note != m_fPortamentoNote) {  
+        
+        // calculate step rate based on distance between the old and new note
+        // and the portamento time setting        
+        m_fPortaStep = (note - m_fPortamentoNote) / (float)m_conf->portaTime;
+      }
+      else {
+        // just remember the note for next time!
+        m_fPortamentoNote = note;
+        m_portaTargetNote = 0;
+      }
+    }
+    else  {
+      m_portaTargetNote = 0;
+    }
+     
+    
+//    float n = note;
     for(int i=0; i<m_voiceCount; ++i) {
       voice = &m_voices[i];
-      voice->m_note = n;
-      voice->m_vol = velocity/127.0;
+      voice->m_midi_note = note;
+      voice->m_midi_vel = velocity;
       if(trigEnv) {
         trigEnvelope(&m_conf->ampEnv, &voice->m_amp);
         trigEnvelope(&m_conf->modEnv, &voice->m_mod);
@@ -226,7 +230,7 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
     // check if the note is already assigned to a channel...
     // if it is, then retrigger it
     for(int i=0; i<m_voiceCount; ++i) {
-      if(m_voices[i].m_note == note) {
+      if(m_voices[i].m_midi_note == note) {
         voice = &m_voices[i];
         break;
       }
@@ -250,8 +254,8 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
       }
     }
     if(voice) {
-      voice->m_note = note;
-      voice->m_vol = velocity/127.0;
+      voice->m_midi_note = note;
+      voice->m_midi_vel = velocity;
       if(trigEnv) {
         trigEnvelope(&m_conf->ampEnv, &voice->m_amp);
         trigEnvelope(&m_conf->modEnv, &voice->m_mod);
@@ -262,13 +266,28 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::untrig(byte note) {
   for(int i=0; i<m_voiceCount; ++i) {
-    if(m_voices[i].m_note == note) {      
+    if(m_voices[i].m_midi_note == note) {      
       untrigEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp);
       untrigEnvelope(&m_conf->modEnv, &m_voices[i].m_mod);
     }
   }
 }
 
+///////////////////////////////////////////////////////////////////////
+// DELETE NOTE FROM NOTE STACK
+byte CLogicalChannel::deleteNote(byte note) {
+  for(int i=0; i<m_noteCount; ++i) {
+    if(m_notes[i].note == note) {
+      // remove it
+      --m_noteCount;
+      for(;i<m_noteCount;++i) {
+        m_notes[i] = m_notes[i+1];
+      }
+      return 1; // note was found
+    }
+  }      
+  return 0;
+}  
 
 ///////////////////////////////////////////////////////////////////////
 // HANDLE NOTE ON MESSAGE
@@ -298,6 +317,7 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
   // trigger the newest note
   trig(note, (m_conf->flags & TONE_CONFIG::USE_VELOCITY)? velocity:127, true);
 }
+
 
 ///////////////////////////////////////////////////////////////////////
 // HANDLE NOTE OFF MESSAGE
@@ -329,6 +349,45 @@ void CLogicalChannel::handlePitchBend(byte lo, byte hi)
 void CLogicalChannel::handleCC(char cc, char value)
 {
   switch(cc) {    
+  case CC_POKEYCFG:
+    {
+      byte mode;
+      switch(ccMapValue(value, TONE_CONFIG::POKEY_MAX)) {
+        case TONE_CONFIG::POKEY_8_HPF:
+          mode = CPokey::PCFG_8HPF;
+          break;        
+        case TONE_CONFIG::POKEY_16:
+          mode = CPokey::PCFG_16;
+          break;        
+        case TONE_CONFIG::POKEY_8:  
+        default:
+          mode = CPokey::PCFG_8;
+          break;
+      }
+      if(mode != m_conf->ePokeyMode) {
+        m_conf->ePokeyMode = mode;
+        m_flags |= SF_RECONFIG;
+      }
+    }
+    break;
+  case CC_POKEYDUAL:
+    {
+      byte flags = m_conf->flags;
+      ccFlag(&flags, TONE_CONFIG::POKEY_DUAL, value); 
+      if(flags != m_conf->flags) {
+        m_flags |= SF_RECONFIG;
+        m_conf->flags = flags;
+      }
+    }
+    break;
+  case CC_POKEYPOLY9:
+    ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_POLY9, value); 
+    poly9(m_conf->flags & TONE_CONFIG::POKEY_POLY9); 
+    break;    
+  case CC_POKEYRANGE: 
+    ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_HIHZ, value); 
+    range(!(m_conf->flags & TONE_CONFIG::POKEY_HIHZ)); 
+    break;    
   case CC_MIDIVEL: 
     ccFlag(&m_conf->flags, TONE_CONFIG::USE_VELOCITY, value); 
     break;
@@ -344,6 +403,9 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MOD:  
     m_fModWheel = (float)value/127; 
     break;
+  case CC_PORTATIME: 
+    m_conf->portaTime = value; 
+    break;  
   case CC_TRANSPOSE: 
     m_conf->transpose = value - 64; 
     break;
@@ -360,19 +422,19 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->fLFOStep = 1.0/(128.0-value); 
     break;
   case CC_AENVATTACK: 
-    m_conf->ampEnv.fAttackStep = 1.0/((float)value+1); 
+    m_conf->ampEnv.fAttackStep = envStep(value);
     break;
   case CC_AENVRELEASE: 
-    m_conf->ampEnv.fReleaseStep = 1.0/((float)value+1); 
+    m_conf->ampEnv.fReleaseStep = envStep(value);
     break;
   case CC_AENVMODE:
     m_conf->ampEnv.mode = ccMapValue(value, ENVELOPE::MAX_MODE); 
     break;
   case CC_MENVATTACK: 
-    m_conf->modEnv.fAttackStep = 1.0/((float)value+1); 
+    m_conf->modEnv.fAttackStep = envStep(value);
     break;
   case CC_MENVRELEASE: 
-    m_conf->modEnv.fReleaseStep = 1.0/((float)value+1); 
+    m_conf->modEnv.fReleaseStep = envStep(value);
     break;
   case CC_MENVMODE: 
     m_conf->modEnv.mode = ccMapValue(value, ENVELOPE::MAX_MODE); 
@@ -381,7 +443,8 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->pitchBendRange = 12.0 * (value/127.0); 
     break;
   case CC_HPF: 
-    m_conf->hpf = 4000.0 * (1.0 -  1.0/((float)value+1));
+    m_conf->hpf = 127-value;
+    break;
   case CC_DIST: 
     m_conf->dist = value; 
     break;    
@@ -461,9 +524,6 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MOD_2_ARP_RATE:
     ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
     break;        
-  case CC_DIVRANGE: 
-    range(value>63); 
-    break;    
   }
 }
 
@@ -497,6 +557,12 @@ void CLogicalChannel::handle(byte status, byte *params)
 void CLogicalChannel::range(byte v) {
   for(int i=0; i<m_voiceCount; ++i) {
     m_voices[i].range(v);
+  }
+}
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::poly9(byte v) {
+  for(int i=0; i<m_voiceCount; ++i) {
+    m_voices[i].poly9(v);
   }
 }
 
@@ -544,7 +610,9 @@ void CLogicalChannel::recalc_detune()
 void CLogicalChannel::runEnvelopes() 
 {
     for(int i=0; i<m_voiceCount; ++i) {       
-      runEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp);
+      if(ENVELOPE_STATE::NONE == runEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp)) {
+        m_voices[i].m_midi_note = 0;
+      }
       runEnvelope(&m_conf->modEnv, &m_voices[i].m_mod);
     }
 }
@@ -654,20 +722,25 @@ void CLogicalChannel::runLFO()
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::runPortamento() 
 {
-    if((m_conf->flags & TONE_CONFIG::PORTAMENTO) && m_portaTargetNote) {
-      float d = m_fPortamentoNote + m_fPortaStep;
-      if(m_fPortamentoNote > m_portaTargetNote && d < m_portaTargetNote) {
-        m_fPortamentoNote = m_portaTargetNote;
-        m_portaTargetNote = 0;
-      }
-      else if(m_fPortamentoNote < m_portaTargetNote && d > m_portaTargetNote) {
-        m_fPortamentoNote = m_portaTargetNote;
-        m_portaTargetNote = 0;
-      }
-      else {
-        m_fPortamentoNote = d;
-      }
+  // is portamento in progress? 
+  if(m_portaTargetNote) {
+    // calculate next note    
+    float d = m_fPortamentoNote + m_fPortaStep;
+    if(m_fPortamentoNote > m_portaTargetNote && d < m_portaTargetNote) {
+      // reached target note
+      m_fPortamentoNote = m_portaTargetNote;
+      m_portaTargetNote = 0;
     }
+    else if(m_fPortamentoNote < m_portaTargetNote && d > m_portaTargetNote) {
+      // reached target note
+      m_fPortamentoNote = m_portaTargetNote;
+      m_portaTargetNote = 0;
+    }
+    else {
+      // still portamenting..
+      m_fPortamentoNote = d;
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -718,7 +791,7 @@ void CLogicalChannel::runArpeggiator()
 {
     if((m_conf->flags & TONE_CONFIG::ARPEGGIATE) && (m_noteCount > 0)) {
 
-      char arpPeriod = m_conf->arpPeriod;
+      float arpPeriod = m_conf->arpPeriod;
       if(m_conf->modEnvDest & TONE_CONFIG::TO_ARP_RATE) {
         arpPeriod *= (1.0-m_voices[0].m_mod.fValue); // NB - mod is of RATE not period
       } 

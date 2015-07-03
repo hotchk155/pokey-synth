@@ -30,8 +30,9 @@ protected:
     
 public:  
   enum {
-    SF_LFOSIGN      = 0x20,
-    SF_LFOCOMPLETE  = 0x40,
+    SF_LFOSIGN      = 0x01,
+    SF_LFOCOMPLETE  = 0x02,
+    SF_RECONFIG     = 0x04
   };
   byte m_flags;
   TONE_CONFIG *m_conf;
@@ -71,6 +72,7 @@ public:
   void reset();
   void quiet();
   void range(byte v);
+  void poly9(byte v);
   void run(byte ticks);
   
 };

@@ -27,13 +27,17 @@
 enum {  
   CC_MOD       = 1,
 
-  CC_POKEYCFG   = 20,
+  CC_PORTATIME       = 29,
+
+  CC_POKEYCFG   = 90,
+  CC_POKEYDUAL  = 91,
+  CC_POKEYRANGE   = 92,
+  CC_POKEYPOLY9   = 93,
   
   CC_MIDIVEL    = 30,     
   CC_UNISON     = 31,    
   CC_TRANSPOSE  = 32,
   CC_FINETUNE   = 33,
-  CC_DIVRANGE   = 34,
   
   CC_ARPMODE    = 35,
   CC_ARPRATE    = 36, 
@@ -119,6 +123,13 @@ typedef struct {
 typedef struct {
 
   enum {
+    POKEY_8,  
+    POKEY_8_HPF,  
+    POKEY_16,
+    POKEY_MAX      
+  };
+  
+  enum {
      TO_VOL           = 0x01,           
      TO_PITCH         = 0x02,
      TO_DIST          = 0x04,
@@ -134,7 +145,10 @@ typedef struct {
     UNISON       = 0x02,      
     ARPEGGIATE   = 0x04,      
     ARP2ENV      = 0x08,
-    PORTAMENTO   = 0x10
+//    PORTAMENTO   = 0x10,
+    POKEY_DUAL   = 0x20,
+    POKEY_HIHZ   = 0x40,
+    POKEY_POLY9  = 0x80
   };
 
   enum {
@@ -166,8 +180,7 @@ typedef struct {
     LFO_MAX
   };
   
-  byte ePokey1Mode;
-  byte ePokey2Mode;  
+  byte            ePokeyMode;       // pokey mode
   byte            flags;            // bit flags
   char            transpose;        // semitone offset -63 to +63 (semitones)
   float           fFineTune;         // fine tune offset (semitones)  

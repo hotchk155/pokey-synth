@@ -46,8 +46,8 @@ void CLogicalVoice::assign(CLogicalChannel *lch, CPokeyChannel *pch)
 // RESET THE VOICE STATE
 void CLogicalVoice::reset()
 {
-  m_note = 0.0;
-  m_vol = 0.0;
+  m_midi_note = 0;
+  m_midi_vel = 0;
   m_amp.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
   m_amp.fValue = m_mod.fValue = 0.0;
   m_mod.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
@@ -58,6 +58,9 @@ void CLogicalVoice::reset()
 // SET THE DIVIDER RANGE
 void CLogicalVoice::range(byte v) {
   m_pch->range(v);
+}
+void CLogicalVoice::poly9(byte v) {
+  m_pch->poly9(v);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -77,11 +80,11 @@ void CLogicalVoice::update()
   ////////////////////////////////////////////////////////////////////////////////
   
   // get initial value
-  if(conf->flags & TONE_CONFIG::PORTAMENTO) {
+  if(m_lch->m_portaTargetNote) {
     value = m_lch->m_fPortamentoNote;
   }
   else {
-    value = m_note;
+    value = m_midi_note;
   }
   
   // add transpose, detune, pitch bend
@@ -108,7 +111,7 @@ void CLogicalVoice::update()
   ////////////////////////////////////////////////////////////////////////////////
 
   // apply volume envelope
-  value = m_vol * m_amp.fValue;
+  value = m_midi_vel/127.0 * m_amp.fValue;
 
   // apply LFO modulation  
   if(conf->lfoDest & TONE_CONFIG::TO_VOL) {
@@ -195,7 +198,7 @@ void CLogicalVoice::update()
   }
   
   // apply HPF to the channel
-  m_pch->hpf_lev(1000.0 * value);    
+  m_pch->hpf_lev(255.0 * value);    
 }
 
 

@@ -26,8 +26,8 @@ CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf) 
 {
-  conf->ePokey1Mode = CPokey::PCFG_8;
-  conf->ePokey2Mode = CPokey::PCFG_NONE;
+  conf->ePokeyMode = CPokey::PCFG_8;
+  //conf->ePokey2Mode = CPokey::PCFG_NONE;
   conf->flags = 0;
   conf->transpose = 0;
   conf->fFineTune = 0;
@@ -146,15 +146,15 @@ void CPokeySynth::configure()
   m_dualPatch = 0;
     
   // Configure POKEY1
-  voices1 = m_pokey1.configure(m_conf[0].ePokey1Mode, &physical_channels[0]);
-  if(m_conf[0].ePokey2Mode != CPokey::PCFG_NONE) {
+  voices1 = m_pokey1.configure(m_conf[0].ePokeyMode, !(m_conf[0].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[0]);
+  if(m_conf[0].flags & TONE_CONFIG::POKEY_DUAL) {
     // first patch requires both chips
-    voices1 += m_pokey2.configure(m_conf[0].ePokey1Mode, &physical_channels[voices1]);
+    voices1 += m_pokey2.configure(m_conf[0].ePokeyMode, !(m_conf[0].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[voices1]);
     m_chan[0].assign(&m_voice[0], voices1, &m_conf[0]);
   }
   else {
     // can have two patches loaded
-    voices2 = m_pokey2.configure(m_conf[1].ePokey1Mode, &physical_channels[voices1]);
+    voices2 = m_pokey2.configure(m_conf[1].ePokeyMode, !(m_conf[1].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[voices1]);
     m_chan[0].assign(&m_voice[0], voices1, &m_conf[0]);
     if(voices2) {
       m_chan[1].assign(&m_voice[voices1], voices2, &m_conf[1]);
@@ -169,7 +169,7 @@ void CPokeySynth::configure()
       m_voice[m_voiceCount++].assign(&m_chan[1], physical_channels[i]);      
   }    
   
-  m_controlPanel.flashCode(m_voiceCount);
+//  m_controlPanel.flashCode(m_voiceCount);
 //  m_controlPanel.led2(1);
 }
 
@@ -234,8 +234,7 @@ void CPokeySynth::init()
     m_storage.loadPatch(patch, &m_globalConfig);
   }*/
   defaultToneConfig(&m_conf[0]);
-  m_conf[1].ePokey1Mode = CPokey::PCFG_NONE;
-  m_conf[1].ePokey2Mode = CPokey::PCFG_NONE;
+  m_conf[1].ePokeyMode = CPokey::PCFG_NONE;
   
   configure();
   delay(500);
@@ -303,6 +302,11 @@ void CPokeySynth::run()
       m_controlPanel.pulse();    
     }
     
+    if(m_chan[0].m_flags & CLogicalChannel::SF_RECONFIG) {
+      configure();
+      m_chan[0].m_flags &= ~CLogicalChannel::SF_RECONFIG;
+    }
+        
     /*
     if(buttonHold && ((midi & 0xF0) == 0x90) && m_midiInput.m_params[1]) {
       char patch = m_midiInput.m_params[0] % 12;

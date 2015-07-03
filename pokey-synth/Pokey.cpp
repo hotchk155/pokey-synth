@@ -19,14 +19,16 @@ CPokeyChannel::CPokeyChannel() {
   m_div_reg = CPokey::NO_REG;
   m_ctrl_reg = CPokey::NO_REG;
   m_div2_reg = CPokey::NO_REG;
+  m_hpf_reg = CPokey::NO_REG;
   m_ctrl = DIST_NONE;
   m_flags = FLAG_NODIV;
 }
 ///////////////////////////////////////////////////////////  
-void CPokeyChannel::configure(CPokey *pokey, byte div_reg, byte ctrl_reg, byte div2_reg) {
+void CPokeyChannel::configure(CPokey *pokey, byte div_reg, byte ctrl_reg, byte div2_reg, byte hpf_reg) {
   m_div_reg = div_reg;
   m_ctrl_reg = ctrl_reg;
   m_div2_reg = div2_reg;
+  m_hpf_reg = hpf_reg;
   m_flags = FLAG_NODIV;
   m_pokey = pokey;
 }
@@ -155,16 +157,22 @@ void CPokeyChannel::vol(byte level) {
 void CPokeyChannel::hpf(int hz) {
   if(m_mode == CHAN_HPF) {
     byte v = hz_to_div8(hz);
-    m_pokey->write(m_div2_reg, v);
+    m_pokey->write(m_hpf_reg, v);
   }
 }
 ///////////////////////////////////////////////////////////  
 void CPokeyChannel::hpf_lev(byte lev) {
-  hpf((lev&0x7F)*10);
+  if(m_mode == CHAN_HPF) {
+    m_pokey->write(m_hpf_reg, lev);
+  }
 }
 ///////////////////////////////////////////////////////////  
 void CPokeyChannel::range(byte v) {
   m_pokey->range(v);
+}
+///////////////////////////////////////////////////////////  
+void CPokeyChannel::poly9(byte v) {
+  m_pokey->poly9(v);
 }
 
 ///////////////////////////////////////////////////////////  
@@ -181,23 +189,22 @@ CPokey::CPokey(byte which)
   m_audctl = 0;
   reset();
   
-  m_chan[0].configure(this, AUDF1, AUDC1, NO_REG);
-  m_chan[1].configure(this, AUDF2, AUDC2, AUDF1);
-  m_chan[2].configure(this, AUDF3, AUDC3, NO_REG);
-  m_chan[3].configure(this, AUDF4, AUDC4, AUDF3);
+  m_chan[0].configure(this, AUDF1, AUDC1, NO_REG, AUDF3);
+  m_chan[1].configure(this, AUDF2, AUDC2, AUDF1,  AUDF4);
+  m_chan[2].configure(this, AUDF3, AUDC3, NO_REG, NO_REG);
+  m_chan[3].configure(this, AUDF4, AUDC4, AUDF3,  NO_REG);
 }
 ///////////////////////////////////////////////////////////  
-int CPokey::configure(int mode, CPokeyChannel **channels) {
+int CPokey::configure(int mode, byte lowhz, CPokeyChannel **channels) {
   int i;
   for(i=0; i<4; ++i) {
     m_chan[i].reset();      
     channels[i] = NULL;
   }
+  byte divlow = lowhz? AUDCTL_DIVLOW:0;
   switch(mode) {
   case PCFG_8:
-  case PCFG_8L:
-    audctl(0);
-    range(PCFG_8 == mode);
+    audctl(divlow);
     for(i=0; i<4; ++i) {
       m_chan[i].mode(CPokeyChannel::CHAN_8);
       channels[i] = &m_chan[i];
@@ -206,33 +213,27 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(SKCTL, 3);
     return 4;
   case PCFG_8HPF:
-  case PCFG_8LHPF:
-    audctl(CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN3HPF);        
-    range(PCFG_8HPF == mode);
+    audctl(divlow | CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN2HPF);        
     m_chan[0].mode(CPokeyChannel::CHAN_HPF);
-    m_chan[2].mode(CPokeyChannel::CHAN_HPF);
+    m_chan[1].mode(CPokeyChannel::CHAN_HPF);
     channels[0] = &m_chan[0];
-    channels[1] = &m_chan[2];
+    channels[1] = &m_chan[1];
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 2;
   case PCFG_8_8HPF:
-  case PCFG_8L_8LHPF:
-    audctl(AUDCTL_CHAN3HPF);        
-    range(PCFG_8_8HPF == mode);
-    m_chan[0].mode(CPokeyChannel::CHAN_8);
+    audctl(divlow | AUDCTL_CHAN2HPF);        
+    m_chan[0].mode(CPokeyChannel::CHAN_HPF);
     m_chan[1].mode(CPokeyChannel::CHAN_8);
-    m_chan[2].mode(CPokeyChannel::CHAN_HPF);
+    m_chan[3].mode(CPokeyChannel::CHAN_8);
     channels[0] = &m_chan[0];
     channels[1] = &m_chan[1];
-    channels[2] = &m_chan[2];
+    channels[2] = &m_chan[3];
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 3;      
   case PCFG_8_8_16:  
-  case PCFG_8L_8L_16:
-    audctl(CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
-    range(PCFG_8_8_16 == mode);
+    audctl(divlow | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
     m_chan[0].mode(CPokeyChannel::CHAN_8);
     m_chan[1].mode(CPokeyChannel::CHAN_8);
     m_chan[3].mode(CPokeyChannel::CHAN_16);
@@ -242,19 +243,17 @@ int CPokey::configure(int mode, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 3;      
-  case PCFG_16_8HPF: 
-  case PCFG_16_8LHPF:
-    audctl(CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
-    range(PCFG_16_8HPF == mode);
+/*  case PCFG_16_8HPF: 
+    audctl(divlow | CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
     m_chan[0].mode(CPokeyChannel::CHAN_HPF);
     m_chan[3].mode(CPokeyChannel::CHAN_16);
     channels[0] = &m_chan[0];
     channels[1] = &m_chan[3];
     write(STIMER, 1);        
     write(SKCTL, 3);
-    return 2;      
+    return 2;      */
   case PCFG_16:
-    audctl(CPokey::AUDCTL_CHAN1DIVSCASCADE | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN1NODIV | AUDCTL_CHAN3NODIV);        
+    audctl(divlow | CPokey::AUDCTL_CHAN1DIVSCASCADE | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN1NODIV | AUDCTL_CHAN3NODIV);        
     m_chan[1].mode(CPokeyChannel::CHAN_16);
     m_chan[3].mode(CPokeyChannel::CHAN_16);
     channels[0] = &m_chan[1];
@@ -329,3 +328,16 @@ void CPokey::range(byte v) {
   }
 }
     
+void CPokey::poly9(byte v) {
+  if(v) {
+    if(!(m_audctl & AUDCTL_9BITPOLY)) {
+      audctl(m_audctl | AUDCTL_9BITPOLY);
+    }
+  } 
+  else {    
+    if(m_audctl & AUDCTL_9BITPOLY) {
+      audctl(m_audctl & ~AUDCTL_9BITPOLY);
+    }
+  }
+}
+
