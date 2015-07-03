@@ -2,12 +2,10 @@
 // POKEYPIG
 // hotchk155/2015
 ///////////////////////////////////////////////////////////
+
 class CLogicalChannel 
 {
 protected:  
-
-  CLogicalVoice *m_voices; // pointer to the first logical voice assigned to this channel
-  byte m_voiceCount;       // number of logical voices assigned to the channel
 
   typedef struct {
     byte note;
@@ -16,8 +14,13 @@ protected:
   enum {
     MAX_NOTES = 10
   };  
-  NOTE m_notes[MAX_NOTES];
-  byte m_noteCount;
+
+  NOTE m_notes[MAX_NOTES];  // notes that are currently held
+  byte m_noteCount;         // numer of notes that are held
+
+  CLogicalVoice *m_voices; // pointer to the first logical voice assigned to this channel
+  byte m_voiceCount;       // number of logical voices assigned to the channel
+
   
   void runEnvelopes();
   void runLFO(); 
@@ -31,8 +34,7 @@ public:
     SF_LFOCOMPLETE  = 0x40,
   };
   byte m_flags;
-//  byte m_lch;
-  CHANNEL_CONFIG *m_conf;
+  TONE_CONFIG *m_conf;
 
   // State info
   float           m_fPitchBend;       // pich bend offset (semitones)
@@ -52,18 +54,18 @@ public:
   float           m_fPortaStep;      // portamento pitch change per 8ms
   
   CLogicalChannel();  
-  void assign(CLogicalVoice *voices, int voiceCount, CHANNEL_CONFIG *conf);
+  void assign(CLogicalVoice *voices, int voiceCount, TONE_CONFIG *conf);
   byte deleteNote(byte note);
   void handle(byte status, byte *params);
   void handleNoteOn(byte note, byte velocity);
   void handleNoteOff(byte note);
   void handleCC(char cc, char value);
   void handlePitchBend(byte lo, byte hi);
-  void trig(byte note, byte velocity);  
+  void trig(byte note, byte velocity, byte trigEnv);  
   void untrig(byte note);
   void tick(byte counter) ;
-  void ccOmni(char value);  
-  void ccFlag(int flag, char value);
+  void ccFlag(byte *flags, int flag, char value);
+  void ccFlag(byte *flags, byte *negFlags, int flag, char value);  
   byte ccMapValue(char value, int maxValue);
   void recalc_detune();
   void reset();

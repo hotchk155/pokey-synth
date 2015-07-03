@@ -24,35 +24,36 @@ CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void CPokeySynth::defaultChannelConfig(CHANNEL_CONFIG *conf) 
+void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf) 
 {
   conf->ePokey1Mode = CPokey::PCFG_8;
   conf->ePokey2Mode = CPokey::PCFG_NONE;
-  
-  //lc->req_channel[0] = -1;
-  conf->flags = CF_FULLVELOCITY; //|CF_OMNINOTES|CF_OMNICC;  
-//  lc->midiChannel = ch;
-//  lc->trigMin = 0;
-//  lc->trigMax = 127;
+  conf->flags = 0;
   conf->transpose = 0;
-  conf->fFineTune = 0.0; 
-  conf->pitchBendRange = 2;
+  conf->fFineTune = 0;
+  conf->pitchBendRange = 5;
   conf->portaTime = 0;
   conf->detuneLevel = 0;
-  conf->eDetuneMode = 0;
-  conf->hpf = 0;
-  conf->dist = 127;
-  conf->eLFOMode = RUN_FREE;
+  conf->eDetuneMode = TONE_CONFIG::DETUNE_NONE;
+  conf->hpf = 0;              // 0-127 high pass filter level
+  conf->dist = 0;
+  conf->eLFOMode = TONE_CONFIG::LFO_FREE;
   conf->fLFOStep = 0.0625;
-  conf->fLFOLevel = 1.0;
-  conf->eLFOWave = LFO_TRI;
-  conf->fAttackStep = 1.0;
-  conf->fReleaseStep = 1.0;
-  conf->arpPeriod = 20;
-  conf->arpCount = 8;  
-  conf->eModWheelDest = MOD2DIST;
-  conf->eEnvelopeDest = ENV2VOL;
-  conf->eLFODest = LFO2NONE;
+  conf->eLFOWave = TONE_CONFIG::WAVE_TRI;
+  conf->lfoDepth = 0;
+  conf->arpPeriod = 10;
+  conf->arpCount = 3;  
+  conf->ampEnv.fAttackStep = 1.0;
+  conf->ampEnv.fReleaseStep = 1.0;
+  conf->ampEnv.mode = ENVELOPE::ATT_REL;
+  conf->modEnv.fAttackStep = 1.0;
+  conf->modEnv.fReleaseStep = 1.0;
+  conf->modEnv.mode = ENVELOPE::ATT_REL;  
+  conf->lfo2Pitch = 0;
+  conf->lfoDest = 0;
+  conf->lfoDestNeg = 0;
+  conf->modWheelDest = 0;
+  conf->modWheelDestNeg = 0;  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -178,11 +179,10 @@ void CPokeySynth::quiet()
   m_pokey1.quiet();
   m_pokey2.quiet();
   for(int i=0; i<8; ++i) {
-    m_voice[i].quiet();
+    m_voice[i].reset();
   }
-  for(int i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-    m_chan[i].quiet();
-  }
+  m_chan[0].quiet();
+  m_chan[1].quiet();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ void CPokeySynth::init()
     byte patch = m_storage.getCurrentPatch();
     m_storage.loadPatch(patch, &m_globalConfig);
   }*/
-  defaultChannelConfig(&m_conf[0]);
+  defaultToneConfig(&m_conf[0]);
   m_conf[1].ePokey1Mode = CPokey::PCFG_NONE;
   m_conf[1].ePokey2Mode = CPokey::PCFG_NONE;
   
@@ -251,7 +251,7 @@ byte voiceToUpdate = 0;
 byte wasHeld = 0;
 void CPokeySynth::run() 
 {
-  //m_pokey1.m_chan[0].test();
+//  m_pokey1.m_chan[0].test();
 //  return;
   int i;
   unsigned long ms = millis();

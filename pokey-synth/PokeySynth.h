@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////
 class CPokeySynth
 {
-  void defaultChannelConfig(CHANNEL_CONFIG *conf);
+  void defaultToneConfig(TONE_CONFIG *conf);
 //  void defaultGlobalConfig(GLOBAL_CONFIG *cfg);
   void configure();
   void quiet();
@@ -23,7 +23,7 @@ public:
   CLogicalVoice  m_voice[8];
   byte m_voiceCount;
   
-  CHANNEL_CONFIG m_conf[2];
+  TONE_CONFIG m_conf[2];
   CLogicalChannel m_chan[2];
   
   byte m_dualPatch;   // whether m_chan[1] has a separate patch
