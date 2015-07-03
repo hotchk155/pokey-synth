@@ -388,7 +388,7 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_UNISON: 
     ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, value); 
     break;
-  case CC_ARPMODE: 
+  case CC_ARPENABLE: 
     ccFlag(&m_conf->flags, TONE_CONFIG::ARPEGGIATE, value); 
     break;
   case CC_ARP2ENV: 
