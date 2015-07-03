@@ -27,7 +27,6 @@ CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
 void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf) 
 {
   conf->ePokeyMode = CPokey::PCFG_8;
-  //conf->ePokey2Mode = CPokey::PCFG_NONE;
   conf->flags = 0;
   conf->transpose = 0;
   conf->fFineTune = 0;
@@ -55,75 +54,6 @@ void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf)
   conf->modWheelDest = 0;
   conf->modWheelDestNeg = 0;  
 }
-
-///////////////////////////////////////////////////////////////////////////////////
-/*
-void CPokeySynth::defaultGlobalConfig(GLOBAL_CONFIG *cfg) 
-{
-  cfg->pokey1Mode = CPokey::PCFG_8;
-  cfg->pokey2Mode = CPokey::PCFG_8;
-  for(int i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-    defaultChannelConfig(i, &cfg->channel_config[i]);
-  }
-  cfg->channel_config[0].req_channel[0] = 0;
-  cfg->channel_config[0].req_channel[1] = 1;
-  cfg->channel_config[0].req_channel[2] = 2;
-  cfg->channel_config[0].req_channel[3] = 3; 
-  cfg->channel_config[0].req_channel[4] = -1; 
-  cfg->channel_config[0].req_channel[5] = 5; 
-  cfg->channel_config[0].req_channel[6] = 6; 
-  cfg->channel_config[0].req_channel[7] = 7; 
-//  cfg->channel_config[0].req_channel[4] = -1; 
-}
-*/
-
-/*
-///////////////////////////////////////////////////////////////////////////////////
-// Configures the entire POKEY synth based on the content of the GlobalConfig
-void CPokeySynth::configure() 
-{
-  int i;
-
-  // reset all the logical voices
-  for(i=0; i<8; ++i) {
-    m_logicalVoices[i].reset();
-  }
-  // reset all the logical channels
-  for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-    m_logicalChannels[i].reset();
-  }
-
-  // Configure POKEY devices and receive pointers to the active channels
-  // for each device, which are placed sequentially from index 0 for 
-  // device #1 and fom index 4 from devices #2
-  CPokeyChannel *physical_channels[8] = {0};
-  m_pokey1.configure(m_globalConfig.pokey1Mode, &physical_channels[0]);
-  m_pokey2.configure(m_globalConfig.pokey2Mode, &physical_channels[4]);
-  
-  // Configure the logical channels and voices
-  char voice_count = 0;
-  for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-    CHANNEL_CONFIG *conf = &m_globalConfig.channel_config[i];    
-    char req_channel_index = 0;
-    char first_voice_for_channel = voice_count;
-    char num_voices_for_channel = 0;
-    while(req_channel_index < 8 && voice_count < 8)
-    {
-      char req_channel = conf->req_channel[req_channel_index++];
-      if(req_channel < 0) {
-        break; // -1 used to indicate end of list of required channels
-      }
-      if(req_channel < 8 && physical_channels[req_channel] != NULL) {
-        // assign the logical channel, physical channel to the logical voice 
-        m_logicalVoices[voice_count++].assign(&m_logicalChannels[i], physical_channels[req_channel]);
-        num_voices_for_channel++;
-      }
-    }       
-    // assign the block of logical voices to the logical channel
-    m_logicalChannels[i].assign(&m_logicalVoices[first_voice_for_channel], num_voices_for_channel, conf);
-  }
-}
-*/
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Configures the synth based on the loaded patches
@@ -168,9 +98,6 @@ void CPokeySynth::configure()
   for(int i=voices1; i<voices1+voices2; ++i) {
       m_voice[m_voiceCount++].assign(&m_chan[1], physical_channels[i]);      
   }    
-  
-//  m_controlPanel.flashCode(m_voiceCount);
-//  m_controlPanel.led2(1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -215,15 +142,13 @@ void CPokeySynth::init()
   digitalWrite(P_CS0, HIGH);
 
 
-//  m_controlPanel.led1(1);
-//  m_controlPanel.led2(1);  
-//  delay(500);
+  m_controlPanel.led1(1);
+  m_controlPanel.led2(1);  
 
-/*
   if(!m_storage.isInitialised()) {
-    defaultGlobalConfig(&m_globalConfig); 
+    defaultToneConfig(&m_conf[0]);
     for(int i=0; i<m_storage.getNumPatches(); ++i) {
-      m_storage.savePatch(i, &m_globalConfig);
+      m_storage.savePatch(i, &m_conf[0]);
     }
     m_storage.setCurrentPatch(0);
     m_storage.setInitialised();
@@ -231,13 +156,12 @@ void CPokeySynth::init()
   }
   else {
     byte patch = m_storage.getCurrentPatch();
-    m_storage.loadPatch(patch, &m_globalConfig);
-  }*/
-  defaultToneConfig(&m_conf[0]);
+    m_storage.loadPatch(patch, &m_conf[0]);
+  }
   m_conf[1].ePokeyMode = CPokey::PCFG_NONE;
   
   configure();
-  delay(500);
+  delay(100);
   m_midiInput.init();
   m_controlPanel.led1(0);
   m_controlPanel.led2(0);
@@ -258,7 +182,6 @@ void CPokeySynth::run()
   byte buttonHold = m_controlPanel.m_buttonHold;
   if(lastTick != (byte)ms) {    
     m_controlPanel.run();
-    /*
     switch(buttonHold) {
       case CControlPanel::HOLD:
         m_controlPanel.led1(1);      
@@ -279,7 +202,6 @@ void CPokeySynth::run()
         }    
         break;
     }
-    */
     m_voice[voiceToUpdate].update();
     if(++voiceToUpdate >= m_voiceCount) {
       voiceToUpdate = 0;
@@ -307,7 +229,6 @@ void CPokeySynth::run()
       m_chan[0].m_flags &= ~CLogicalChannel::SF_RECONFIG;
     }
         
-    /*
     if(buttonHold && ((midi & 0xF0) == 0x90) && m_midiInput.m_params[1]) {
       char patch = m_midiInput.m_params[0] % 12;
       if(patch >= 0 && patch < m_storage.getNumPatches()) {
@@ -315,7 +236,7 @@ void CPokeySynth::run()
           case CControlPanel::HOLD:
             m_controlPanel.led1(1);
             m_controlPanel.led2(1);
-            m_storage.loadPatch(patch, &m_globalConfig);
+            m_storage.loadPatch(patch, &m_conf[0]);
             m_storage.setCurrentPatch(patch);
             delay(200);
             configure();
@@ -326,7 +247,7 @@ void CPokeySynth::run()
           case CControlPanel::LONGHOLD:
             m_controlPanel.led1(1);
             m_controlPanel.led2(1);
-            m_storage.savePatch(patch, &m_globalConfig);
+            m_storage.savePatch(patch, &m_conf[0]);
             m_storage.setCurrentPatch(patch);
             delay(500);
             m_controlPanel.led1(0);
@@ -336,13 +257,6 @@ void CPokeySynth::run()
         }
       }
     }
-    else {      
-      m_controlPanel.pulse();    
-      for(i=0; i<NUM_LOGICAL_CHANNELS; ++i) {
-        m_logicalChannels[i].handle(midi, m_midiInput.m_params);
-      }
-    }
-    */
 }
 
 

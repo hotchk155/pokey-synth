@@ -145,10 +145,9 @@ typedef struct {
     UNISON       = 0x02,      
     ARPEGGIATE   = 0x04,      
     ARP2ENV      = 0x08,
-//    PORTAMENTO   = 0x10,
-    POKEY_DUAL   = 0x20,
-    POKEY_HIHZ   = 0x40,
-    POKEY_POLY9  = 0x80
+    POKEY_DUAL   = 0x10,
+    POKEY_HIHZ   = 0x20,
+    POKEY_POLY9  = 0x40
   };
 
   enum {
@@ -208,7 +207,4 @@ typedef struct {
   byte            modWheelDestNeg;
 } TONE_CONFIG;
 
-typedef union {
-  TONE_CONFIG tone;  
-} CHANNEL_CONFIG;
 

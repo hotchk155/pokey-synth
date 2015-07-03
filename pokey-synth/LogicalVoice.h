@@ -9,7 +9,6 @@ class CLogicalVoice
   CLogicalChannel *m_lch;
   CPokeyChannel *m_pch;
   
-//  CPokeyChannel *m_pch;   // physical pokey channel
 public:  
   ENVELOPE_STATE m_amp;
   ENVELOPE_STATE m_mod;
@@ -24,7 +23,6 @@ public:
   void poly9(byte v);
   void update();
   void reset();
-//  void quiet();  
 };
 
 

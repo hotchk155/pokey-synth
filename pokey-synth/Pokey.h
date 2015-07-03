@@ -98,17 +98,15 @@ class CPokey {
       AUDCTL_CHAN3DIVSCASCADE  = 0x08,
       AUDCTL_CHAN1HPF          = 0x04,
       AUDCTL_CHAN2HPF          = 0x02,
-//      AUDCTL_CHAN3HPF          = 0x02,
       AUDCTL_DIVLOW            = 0x01
     };
     enum {
       PCFG_NONE      = 0,
       PCFG_8         = 1,   // supporting 4 channels with 8 bit divider
       PCFG_16        = 2,   // supporting two 16-bit channels
-      PCFG_8_8_16    = 3,   // supporting two 8-bit and one 16 bit channel
+      PCFG_8_16      = 3,   // supporting two 8-bit and one 16 bit channel
       PCFG_8HPF      = 4,   // supporting 2 channels with 8 bit divider and 8 bit HPF
       PCFG_8_8HPF    = 5   // supporting two 8-bit channels and one 8-bit channel with HPF
-      //PCFG_16_8HPF   = 6    // supporting one 8-bit channel with HPF and one 16 bit channel            
     };
     enum {
       FLAG_LOWHZ             = 0x01  // uSet dividers for 8 bit modes for low freq range

@@ -9,12 +9,12 @@
 class CStorage 
 {
   enum {
-    EEPROM_MAGIC_COOKIE  = 0x6702,  // "magic number" that identifies initialised eeprom
+    EEPROM_MAGIC_COOKIE  = 0x6703,  // "magic number" that identifies initialised eeprom
     EEADDR_MAGIC_COOKIE  = 0,       // address for magic cookie
     EEADDR_CURRENT_PATCH = 2,       // location to store current patch
-    EEADDR_PATCHES       = 20,      // base address for patches
-    EEPROM_PATCH_SIZE    = 200,     // size allocated per patch
-    EEPROM_NUM_PATCHES   = 5        // number of patches that fit in eeprom
+    EEADDR_PATCHES       = 64,      // base address for patches
+    EEPROM_PATCH_SIZE    = 64,      // size allocated per patch
+    EEPROM_NUM_PATCHES   = 12        // number of patches that fit in eeprom
   };
 public:
   byte getNumPatches() {
@@ -44,24 +44,23 @@ public:
     byte v = EEPROM.read(EEADDR_CURRENT_PATCH);
     return constrain(v,0,EEPROM_NUM_PATCHES-1);
   }
-/*
   ///////////////////////////////////////////////////////////
-  void savePatch(int index, GLOBAL_CONFIG *block) {
+  void savePatch(int index, TONE_CONFIG *block) {
     if(index < 0 || index >= EEPROM_NUM_PATCHES)
       return;
     int addr = EEADDR_PATCHES + EEPROM_PATCH_SIZE * index;
-    for(int i=0; i<sizeof(GLOBAL_CONFIG); ++i) {
+    for(int i=0; i<sizeof(TONE_CONFIG); ++i) {
       EEPROM.write(addr++, ((byte*)block)[i]);      
     }
   }
 
   ///////////////////////////////////////////////////////////
-  void loadPatch(char index, GLOBAL_CONFIG *block) {
+  void loadPatch(char index, TONE_CONFIG *block) {
     if(index < 0 || index >= EEPROM_NUM_PATCHES)
       return;
     int addr = EEADDR_PATCHES + EEPROM_PATCH_SIZE * index;
-    for(int i=0; i<sizeof(GLOBAL_CONFIG); ++i) {
+    for(int i=0; i<sizeof(TONE_CONFIG); ++i) {
       ((byte*)block)[i] = EEPROM.read(addr++);      
     }    
-  }*/
+  }
 };

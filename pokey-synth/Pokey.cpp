@@ -194,6 +194,7 @@ CPokey::CPokey(byte which)
   m_chan[2].configure(this, AUDF3, AUDC3, NO_REG, NO_REG);
   m_chan[3].configure(this, AUDF4, AUDC4, AUDF3,  NO_REG);
 }
+
 ///////////////////////////////////////////////////////////  
 int CPokey::configure(int mode, byte lowhz, CPokeyChannel **channels) {
   int i;
@@ -232,7 +233,7 @@ int CPokey::configure(int mode, byte lowhz, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 3;      
-  case PCFG_8_8_16:  
+  case PCFG_8_16:  
     audctl(divlow | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
     m_chan[0].mode(CPokeyChannel::CHAN_8);
     m_chan[1].mode(CPokeyChannel::CHAN_8);
@@ -243,15 +244,6 @@ int CPokey::configure(int mode, byte lowhz, CPokeyChannel **channels) {
     write(STIMER, 1);        
     write(SKCTL, 3);
     return 3;      
-/*  case PCFG_16_8HPF: 
-    audctl(divlow | CPokey::AUDCTL_CHAN1HPF | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN3NODIV);        
-    m_chan[0].mode(CPokeyChannel::CHAN_HPF);
-    m_chan[3].mode(CPokeyChannel::CHAN_16);
-    channels[0] = &m_chan[0];
-    channels[1] = &m_chan[3];
-    write(STIMER, 1);        
-    write(SKCTL, 3);
-    return 2;      */
   case PCFG_16:
     audctl(divlow | CPokey::AUDCTL_CHAN1DIVSCASCADE | CPokey::AUDCTL_CHAN3DIVSCASCADE | AUDCTL_CHAN1NODIV | AUDCTL_CHAN3NODIV);        
     m_chan[1].mode(CPokeyChannel::CHAN_16);
@@ -265,6 +257,7 @@ int CPokey::configure(int mode, byte lowhz, CPokeyChannel **channels) {
   }
   return 0;
 }
+
 ///////////////////////////////////////////////////////////
 void CPokey::write(byte addr, byte data) 
 {      
@@ -295,11 +288,13 @@ void CPokey::write(byte addr, byte data)
     _DIGITAL_WRITE(P_CS0, HIGH);
   }
 }    
+
 ///////////////////////////////////////////////////////////
 void CPokey::audctl(byte v) {
   write(AUDCTL, v);
   m_audctl = v;
 }
+
 ///////////////////////////////////////////////////////////
 void CPokey::reset() {
   for(int i=0;i<16;++i) {
@@ -307,6 +302,7 @@ void CPokey::reset() {
   }
   write(IRQEN,0);
 }
+
 ///////////////////////////////////////////////////////////
 void CPokey::quiet() {
   for(int i=0;i<4;++i) {
@@ -327,7 +323,8 @@ void CPokey::range(byte v) {
     }
   }
 }
-    
+
+///////////////////////////////////////////////////////////    
 void CPokey::poly9(byte v) {
   if(v) {
     if(!(m_audctl & AUDCTL_9BITPOLY)) {

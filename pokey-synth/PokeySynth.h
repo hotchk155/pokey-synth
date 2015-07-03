@@ -5,7 +5,6 @@
 class CPokeySynth
 {
   void defaultToneConfig(TONE_CONFIG *conf);
-//  void defaultGlobalConfig(GLOBAL_CONFIG *cfg);
   void configure();
   void quiet();
 public:  
@@ -26,24 +25,13 @@ public:
   TONE_CONFIG m_conf[2];
   CLogicalChannel m_chan[2];
   
-  byte m_dualPatch;   // whether m_chan[1] has a separate patch
+  byte m_dualPatch;   
 
   // EEPROM storage manager
   CStorage m_storage;
 
-  // This structure contains the entire, currently active
-  // "patch" for the synth and is the data that is stored
-  // to EEPROM when patches are saved.
-  //GLOBAL_CONFIG m_globalConfig;
-  
-  
   CPokeySynth();
   void init();
   void run();
 };
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////
 

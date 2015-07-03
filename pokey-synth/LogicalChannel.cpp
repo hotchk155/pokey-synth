@@ -130,10 +130,6 @@ void CLogicalChannel::quiet() {
   m_noteCount = 0;
 }
 
-
-
-
-
 ///////////////////////////////////////////////////////////////////////
 // SET A FLAG BIT BASED ON CC VALUE
 void CLogicalChannel::ccFlag(byte *flags, int flag, char value) {
@@ -212,9 +208,7 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
     else  {
       m_portaTargetNote = 0;
     }
-     
-    
-//    float n = note;
+
     for(int i=0; i<m_voiceCount; ++i) {
       voice = &m_voices[i];
       voice->m_midi_note = note;
@@ -263,6 +257,7 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
     }
   }
 }  
+
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::untrig(byte note) {
   for(int i=0; i<m_voiceCount; ++i) {
@@ -317,7 +312,6 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
   // trigger the newest note
   trig(note, (m_conf->flags & TONE_CONFIG::USE_VELOCITY)? velocity:127, true);
 }
-
 
 ///////////////////////////////////////////////////////////////////////
 // HANDLE NOTE OFF MESSAGE
@@ -605,7 +599,6 @@ void CLogicalChannel::recalc_detune()
   }
 }
 
-
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::runEnvelopes() 
 {
@@ -811,8 +804,6 @@ void CLogicalChannel::runArpeggiator()
         if(m_arpIndex >= m_noteCount) { // reached the last note?            
           if(m_noteCount > m_conf->arpCount) { // need to arp just recent notes?
             m_arpIndex = m_noteCount - m_conf->arpCount;
-            // 0 1 2 3 4 5 6 7 8 9 (10)
-            //             
           } 
           else {
             m_arpIndex = 0;
@@ -828,7 +819,6 @@ void CLogicalChannel::runArpeggiator()
       }
     }
 }
-
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::run(byte ticks)  

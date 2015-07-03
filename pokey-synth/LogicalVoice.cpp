@@ -3,11 +3,6 @@
 // hotchk155/2015
 ///////////////////////////////////////////////////////////
 
-//TODO inhibit portamento on poly chann
-// LFO modulation on volume - no modulation should = full volume?
-//Velocity as modulator
-// separate envelopes for modulation and volume
-
 ///////////////////////////////////////////////////////////
 //
 // LOGICAL VOICE
