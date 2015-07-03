@@ -26,58 +26,18 @@
 // CONTROLLER NUMBERS
 enum {  
   CC_MOD       = 1,
-
-  CC_PORTATIME       = 29,
-
-  CC_POKEYCFG   = 90,
-  CC_POKEYDUAL  = 91,
-  CC_POKEYRANGE   = 92,
-  CC_POKEYPOLY9   = 93,
   
   CC_MIDIVEL    = 30,     
   CC_UNISON     = 31,    
   CC_TRANSPOSE  = 32,
   CC_FINETUNE   = 33,
-  
-  CC_ARPMODE    = 35,
-  CC_ARPRATE    = 36, 
-  CC_ARPCOUNT    = 37, 
-  CC_ARP2ENV    = 38, 
-  
-  CC_LFOMODE    = 39,
-  CC_LFOWAVE    = 40,
-  CC_LFORATE    = 41,
-  CC_LFODEPTH    = 43,
-  
-  CC_DETUNEMODE  = 44,
-  CC_DETUNELEVEL = 45,
-  
-  CC_AENVMODE = 46,
-  CC_AENVATTACK  = 47,
-  CC_AENVRELEASE = 48,
-      
   CC_PBRANGE    = 50,
+  CC_PORTATIME       = 29,
   CC_HPF        = 51,
   CC_DIST       =52,    
-  
-  CC_MENVMODE   = 53,
-  CC_MENVATTACK  = 54,
-  CC_MENVRELEASE = 55,    
 
-  CC_ENV_2_PITCH        = 56,
-  CC_ENV_2_DISTORTION   = 57,
-  CC_ENV_2_HPF          = 58,
-  CC_ENV_2_DETUNE       = 59,
-  CC_ENV_2_LFO_RATE     = 60,
-  CC_ENV_2_LFO_DEPTH    = 61,
-  CC_ENV_2_ARP_RATE     = 62,
-  
-  CC_LFO_2_PITCH          = 69,
-  CC_LFO_2_VOL          = 70,
-  CC_LFO_2_DIST          = 71,
-  CC_LFO_2_HPF           = 72,
-  CC_LFO_2_DETUNE        = 73,
-  CC_LFO_2_ARP_RATE      = 74,
+  CC_DETUNEMODE  = 44,
+  CC_DETUNELEVEL = 45,
 
   CC_MOD_2_VOL            = 75,
   CC_MOD_2_DIST           = 76,
@@ -85,8 +45,45 @@ enum {
   CC_MOD_2_DETUNE         = 78,
   CC_MOD_2_LFO_RATE        = 79,
   CC_MOD_2_LFO_DEPTH       = 80,
-  CC_MOD_2_ARP_RATE       = 81    
+  CC_MOD_2_ARP_RATE       = 81,
   
+
+  CC_AENVMODE = 46,
+  CC_AENVATTACK  = 47,
+  CC_AENVRELEASE = 48,
+
+  CC_MENVMODE   = 53,
+  CC_MENVATTACK  = 54,
+  CC_MENVRELEASE = 55,    
+  CC_ENV_2_PITCH        = 56,
+  CC_ENV_2_DISTORTION   = 57,
+  CC_ENV_2_HPF          = 58,
+  CC_ENV_2_DETUNE       = 59,
+  CC_ENV_2_LFO_RATE     = 60,
+  CC_ENV_2_LFO_DEPTH    = 61,
+  CC_ENV_2_ARP_RATE     = 62,
+
+  CC_LFOMODE    = 39,
+  CC_LFOWAVE    = 40,
+  CC_LFORATE    = 41,
+  CC_LFODEPTH    = 43,
+  CC_LFO_2_PITCH          = 69,
+  CC_LFO_2_VOL          = 70,
+  CC_LFO_2_DIST          = 71,
+  CC_LFO_2_HPF           = 72,
+  CC_LFO_2_DETUNE        = 73,
+  CC_LFO_2_ARP_RATE      = 74,
+  
+  
+  CC_ARPMODE    = 35,
+  CC_ARPRATE    = 36, 
+  CC_ARPCOUNT    = 37, 
+  CC_ARP2ENV    = 38, 
+
+  CC_POKEYCFG   = 90,
+  CC_POKEYDUAL  = 91,
+  CC_POKEYRANGE   = 92,
+  CC_POKEYPOLY9   = 93,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
