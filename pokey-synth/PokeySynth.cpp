@@ -19,6 +19,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
 {
+  m_numPOKEYs = 1;
   m_dualPatch = 0;
   m_voiceCount = 0;
 }
@@ -150,6 +151,8 @@ void CPokeySynth::init()
     for(int i=0; i<m_storage.getNumPatches(); ++i) {
       m_storage.savePatch(i, &m_conf[0]);
     }
+    m_numPOKEYs = 1;
+    m_storage.setNumPokeys(1);
     m_storage.setCurrentPatch(0);
     m_storage.setInitialised();
     m_controlPanel.flashCode(5);    
@@ -157,12 +160,21 @@ void CPokeySynth::init()
   else {
     byte patch = m_storage.getCurrentPatch();
     m_storage.loadPatch(patch, &m_conf[0]);
+    m_numPOKEYs = m_storage.getNumPokeys();    
   }
   m_conf[1].ePokeyMode = CPokey::PCFG_NONE;
   
   configure();
   delay(100);
   m_midiInput.init();
+  if(m_numPOKEYs > 1) {
+    m_controlPanel.led1(0);
+    m_controlPanel.led2(0);
+    delay(200);
+    m_controlPanel.led1(1);
+    m_controlPanel.led2(1);
+    delay(200);
+  }
   m_controlPanel.led1(0);
   m_controlPanel.led2(0);
 }

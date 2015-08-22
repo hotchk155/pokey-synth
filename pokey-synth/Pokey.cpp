@@ -261,6 +261,7 @@ int CPokey::configure(int mode, byte lowhz, CPokeyChannel **channels) {
 ///////////////////////////////////////////////////////////
 void CPokey::write(byte addr, byte data) 
 {      
+  _DIGITAL_WRITE(P_RW, LOW);  
   _DIGITAL_WRITE(P_AD0, !!(addr&0x01));
   _DIGITAL_WRITE(P_AD1, !!(addr&0x02));
   _DIGITAL_WRITE(P_AD2, !!(addr&0x04));
@@ -337,4 +338,5 @@ void CPokey::poly9(byte v) {
     }
   }
 }
+
 

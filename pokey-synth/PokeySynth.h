@@ -25,6 +25,7 @@ public:
   TONE_CONFIG m_conf[2];
   CLogicalChannel m_chan[2];
   
+  byte m_numPOKEYs;
   byte m_dualPatch;   
 
   // EEPROM storage manager

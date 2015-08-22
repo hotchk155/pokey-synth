@@ -123,10 +123,12 @@ class CPokey {
     CPokey(byte which);
     int configure(int mode, byte lowhz, CPokeyChannel **channels);
     void write(byte addr, byte data);
+    byte read(byte addr);
     void audctl(byte v);
     void reset();
     void quiet();
     void range(byte v);    
     void poly9(byte v);    
+    byte isInstalled();
 };
 
