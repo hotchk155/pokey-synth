@@ -31,7 +31,7 @@
        ctrlrMenuBarBackgroundColour1="fff7f7f7" ctrlrMenuBarBackgroundColour2="ffcccccc"
        ctrlrMenuBarTextColour="ff000000" ctrlrMenuBarHighlightedTextColour="ffffffff"
        ctrlrMenuBarHighlightColour="ff4364ff" ctrlrMenuBarFont="&lt;Sans-Serif&gt;;18;0;0;0;0;1;3"
-       ctrlrUseEditorWrapper="0" panelIndex="1">
+       ctrlrUseEditorWrapper="0" panelIndex="0">
   <uiWindowManager>
     <uiChildWindow uiChildWindowName="BufferEditor" uiChildWindowState="560 275 800 500">
       <uiChildWindowContentState>
@@ -208,6 +208,112 @@
           <value name="modulator-1" value="0"/>
         </panelState>
       </midiLibraryProgram>
+      <midiLibraryProgram name="Snapshot - 16:25:57" description="" number="0" midiLibraryCanGetItem="1"
+                          midiLibraryCanSendItem="1" uuid="6593819744274144b9dbc723f5a95732"
+                          time="1437837957873">
+        <panelState panelVersionMajor="1" panelVersionMinor="0" time="1437837957873">
+          <value name="modulator-8" value="0"/>
+          <value name="modulator-12" value="1"/>
+          <value name="modulator-15" value="1"/>
+          <value name="modulator-25" value="1"/>
+          <value name="modulator-26" value="1"/>
+          <value name="modulator-24" value="1"/>
+          <value name="modulator-27" value="0"/>
+          <value name="modulator-28" value="1"/>
+          <value name="modulator-31" value="1"/>
+          <value name="modulator-34" value="1"/>
+          <value name="modulator-18" value="1"/>
+          <value name="modulator-35" value="1"/>
+          <value name="modulator-36" value="1"/>
+          <value name="modulator-37" value="1"/>
+          <value name="modulator-38" value="1"/>
+          <value name="modulator-39" value="1"/>
+          <value name="modulator-40" value="0"/>
+          <value name="modulator-19" value="1"/>
+          <value name="modulator-41" value="79"/>
+          <value name="modulator-21" value="1"/>
+          <value name="modulator-42" value="1"/>
+          <value name="modulator-43" value="1"/>
+          <value name="modulator-44" value="1"/>
+          <value name="modulator-45" value="1"/>
+          <value name="modulator-46" value="1"/>
+          <value name="modulator-47" value="0"/>
+          <value name="modulator-48" value="1"/>
+          <value name="modulator-32" value="0"/>
+          <value name="modulator-33" value="5"/>
+          <value name="modulator-49" value="0"/>
+          <value name="modulator-50" value="15"/>
+          <value name="modulator-51" value="0"/>
+          <value name="modulator-52" value="0"/>
+          <value name="modulator-53" value="10"/>
+          <value name="modulator-54" value="1"/>
+          <value name="modulator-55" value="61"/>
+          <value name="modulator-56" value="1"/>
+          <value name="modulator-57" value="0"/>
+          <value name="modulator-58" value="2"/>
+          <value name="modulator-59" value="0"/>
+          <value name="modulator-60" value="0"/>
+          <value name="modulator-61" value="0"/>
+          <value name="modulator-22" value="1"/>
+          <value name="modulator-62" value="10"/>
+          <value name="modulator-63" value="0"/>
+          <value name="modulator-64" value="112"/>
+          <value name="modulator-65" value="103"/>
+        </panelState>
+      </midiLibraryProgram>
+      <midiLibraryProgram name="Snapshot - 16:25:58" description="" number="0" midiLibraryCanGetItem="1"
+                          midiLibraryCanSendItem="1" uuid="5b351eecad024b66b4433baecfc2eb92"
+                          time="1437837958521">
+        <panelState panelVersionMajor="1" panelVersionMinor="0" time="1437837958521">
+          <value name="modulator-8" value="0"/>
+          <value name="modulator-12" value="1"/>
+          <value name="modulator-15" value="1"/>
+          <value name="modulator-25" value="1"/>
+          <value name="modulator-26" value="1"/>
+          <value name="modulator-24" value="1"/>
+          <value name="modulator-27" value="0"/>
+          <value name="modulator-28" value="1"/>
+          <value name="modulator-31" value="1"/>
+          <value name="modulator-34" value="1"/>
+          <value name="modulator-18" value="1"/>
+          <value name="modulator-35" value="1"/>
+          <value name="modulator-36" value="1"/>
+          <value name="modulator-37" value="1"/>
+          <value name="modulator-38" value="1"/>
+          <value name="modulator-39" value="1"/>
+          <value name="modulator-40" value="0"/>
+          <value name="modulator-19" value="1"/>
+          <value name="modulator-41" value="79"/>
+          <value name="modulator-21" value="1"/>
+          <value name="modulator-42" value="1"/>
+          <value name="modulator-43" value="1"/>
+          <value name="modulator-44" value="1"/>
+          <value name="modulator-45" value="1"/>
+          <value name="modulator-46" value="1"/>
+          <value name="modulator-47" value="0"/>
+          <value name="modulator-48" value="1"/>
+          <value name="modulator-32" value="0"/>
+          <value name="modulator-33" value="5"/>
+          <value name="modulator-49" value="0"/>
+          <value name="modulator-50" value="15"/>
+          <value name="modulator-51" value="0"/>
+          <value name="modulator-52" value="0"/>
+          <value name="modulator-53" value="10"/>
+          <value name="modulator-54" value="1"/>
+          <value name="modulator-55" value="61"/>
+          <value name="modulator-56" value="1"/>
+          <value name="modulator-57" value="0"/>
+          <value name="modulator-58" value="2"/>
+          <value name="modulator-59" value="0"/>
+          <value name="modulator-60" value="0"/>
+          <value name="modulator-61" value="0"/>
+          <value name="modulator-22" value="1"/>
+          <value name="modulator-62" value="10"/>
+          <value name="modulator-63" value="0"/>
+          <value name="modulator-64" value="112"/>
+          <value name="modulator-65" value="103"/>
+        </panelState>
+      </midiLibraryProgram>
     </midiLibrarySnapshots>
     <midiLibraryFirmware name="Firmware"/>
     <midiLibraryEditBuffer name="Edit buffer"/>
@@ -263,7 +369,7 @@
   <uiPanelEditor uiPanelCanvasRectangle="0 0 732 800" uiPanelSnapSize="8" uiPanelBackgroundColour="ff111111"
                  uiPanelBackgroundColour1="ffffffff" uiPanelBackgroundColour2="0xffffffff"
                  uiPanelBackgroundGradientType="0" uiPanelImageResource="-- None"
-                 uiPanelEditMode="1" uiPanelLock="0" uiPanelDisabledOnEdit="0"
+                 uiPanelEditMode="0" uiPanelLock="0" uiPanelDisabledOnEdit="0"
                  uiPanelWidth="400" uiPanelHeight="600" name="Ctrlr Panel" uiPanelImageAlpha="255"
                  uiPanelImageLayout="64" uiPanelSnapActive="1" uiPanelPropertiesOnRight="0"
                  luaPanelPaintBackground="-- None" luaPanelResized="-- None" luaPanelFileDragDropHandler="-- None"
@@ -272,7 +378,7 @@
                  uiPanelTooltipBackgroundColour="0xffeeeebb" uiPanelTooltipOutlineColour="0xff000000"
                  uiPanelTooltipColour="0xff000000" uiPanelTooltipCornerRound="1"
                  uiPanelTooltipPlacement="2" uiPanelTooltipFont="&lt;Sans-Serif&gt;;15;1;0;0;0;1;3"
-                 uiPanelZoom="1" uiPanelViewPortSize="771" uiPanelPropertiesSize="384">
+                 uiPanelZoom="1" uiPanelViewPortSize="926" uiPanelPropertiesSize="231">
     <uiPanelCanvasLayer uiPanelCanvasLayerName="New layer" uiPanelCanvasLayerUid="f380dd4000000000e8f83000a8000000"
                         uiPanelCanvasLayerColour="0x000000" uiPanelCanvasLayerVisibility="1"
                         uiPanelCanvasLayerIndex="0"/>
@@ -325,7 +431,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-12" modulatorMin="0" modulatorValue="1">
+             name="modulator-12" modulatorMin="0" modulatorValue="2">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="85" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -520,7 +626,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-27" modulatorMin="0" modulatorValue="71">
+             name="modulator-27" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="104" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -604,7 +710,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-31" modulatorMin="0" modulatorValue="0">
+             name="modulator-31" modulatorMin="0" modulatorValue="1">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="103" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -643,7 +749,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-34" modulatorMin="0" modulatorValue="1">
+             name="modulator-34" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="106" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -916,7 +1022,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-40" modulatorMin="0" modulatorValue="4">
+             name="modulator-40" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="107" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -994,7 +1100,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-41" modulatorMin="0" modulatorValue="43">
+             name="modulator-41" modulatorMin="0" modulatorValue="4">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="105" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1397,7 +1503,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="-9216" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-33" modulatorMin="-63" modulatorValue="0">
+             name="modulator-33" modulatorMin="-63" modulatorValue="5">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="17" midiMessageCtrlrValue="4608" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1488,7 +1594,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="-9216" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-50" modulatorMin="0" modulatorValue="24">
+             name="modulator-50" modulatorMin="0" modulatorValue="12">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="18" midiMessageCtrlrValue="4608" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1534,7 +1640,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="-9216" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-51" modulatorMin="0" modulatorValue="124">
+             name="modulator-51" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="20" midiMessageCtrlrValue="4608" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1617,16 +1723,16 @@
                uiSliderPopupBubble="0" componentLayerUid="f380dd4000000000e8f83000a8000000"
                componentRectangle="256 120 49 66" uiType="uiSlider"/>
   </modulator>
-  <modulator modulatorVstExported="1" modulatorMax="127" vstIndex="37" modulatorIsStatic="0"
+  <modulator modulatorVstExported="1" modulatorMax="12" vstIndex="37" modulatorIsStatic="0"
              modulatorGlobalVariable="-1" modulatorMuteOnStart="0" modulatorExcludeFromSnapshot="0"
-             modulatorValueExpression="modulatorValue" modulatorValueExpressionReverse="midiValue"
+             modulatorValueExpression="modulatorValue+64" modulatorValueExpressionReverse="midiValue-64"
              luaModulatorGetValueForMIDI="-- None" luaModulatorGetValueFromMIDI="-- None"
              modulatorLinkedToPanelProperty="-- None" modulatorLinkedToModulatorProperty="-- None"
              modulatorLinkedToModulator="-- None" modulatorLinkedToModulatorSource="1"
              modulatorLinkedToComponent="0" modulatorBaseValue="-9216" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-53" modulatorMin="0" modulatorValue="64">
+             name="modulator-53" modulatorMin="-12" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="23" midiMessageCtrlrValue="4608" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1645,8 +1751,8 @@
                componentBubbleValueColour="0xff000000" componentBubbleValueFont="&lt;Sans-Serif&gt;;14;0;0;0;0;1;3"
                componentBubbleValueJustification="centred" componentBubbleNameColour="0xff000000"
                componentBubbleNameFont="&lt;Sans-Serif&gt;;14;0;0;0;0;1;3" componentBubbleNameJustification="centred"
-               componentValueDecimalPlaces="0" uiSliderStyle="Rotary" uiSliderMin="0"
-               uiSliderMax="127" uiSliderInterval="1" uiSliderDoubleClickEnabled="1"
+               componentValueDecimalPlaces="0" uiSliderStyle="Rotary" uiSliderMin="-12"
+               uiSliderMax="12" uiSliderInterval="1" uiSliderDoubleClickEnabled="1"
                uiSliderDoubleClickValue="0" uiSliderValuePosition="4" uiSliderValueHeight="12"
                uiSliderValueWidth="64" uiSliderTrackCornerSize="5" uiSliderThumbCornerSize="3"
                uiSliderThumbWidth="0" uiSliderThumbHeight="0" uiSliderThumbFlatOnLeft="0"
@@ -1672,7 +1778,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-54" modulatorMin="0" modulatorValue="1">
+             name="modulator-54" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="22" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1711,7 +1817,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="-9216" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-55" modulatorMin="0" modulatorValue="119">
+             name="modulator-55" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="117" midiMessageCtrlrValue="4608" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1835,7 +1941,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="-9216" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-58" modulatorMin="0" modulatorValue="3">
+             name="modulator-58" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="118" midiMessageCtrlrValue="4608" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1881,7 +1987,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-59" modulatorMin="0" modulatorValue="0">
+             name="modulator-59" modulatorMin="0" modulatorValue="2">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="92" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -1959,7 +2065,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-61" modulatorMin="0" modulatorValue="0">
+             name="modulator-61" modulatorMin="0" modulatorValue="2">
     <midi midiMessageType="9" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="1" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -2114,7 +2220,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-62" modulatorMin="0" modulatorValue="9">
+             name="modulator-62" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="73" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -2159,7 +2265,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-63" modulatorMin="0" modulatorValue="65">
+             name="modulator-63" modulatorMin="0" modulatorValue="0">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="72" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -2204,7 +2310,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-64" modulatorMin="0" modulatorValue="11">
+             name="modulator-64" modulatorMin="0" modulatorValue="63">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="108" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
@@ -2249,7 +2355,7 @@
              modulatorLinkedToComponent="0" modulatorBaseValue="0" modulatorCustomIndex="0"
              modulatorCustomName="" modulatorCustomIndexGroup="0" modulatorCustomNameGroup=""
              modulatorVstNameFormat="%n" luaModulatorValueChange="-- None"
-             name="modulator-65" modulatorMin="0" modulatorValue="69">
+             name="modulator-65" modulatorMin="0" modulatorValue="18">
     <midi midiMessageType="0" midiMessageChannelOverride="0" midiMessageChannel="1"
           midiMessageCtrlrNumber="109" midiMessageCtrlrValue="0" midiMessageMultiList=""
           midiMessageSysExFormula=""/>
