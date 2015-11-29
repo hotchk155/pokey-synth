@@ -64,17 +64,16 @@ byte CPokeyChannel::hz_to_div8(float hz)
   if(hz<1) {
     return 0;
   }  
-  unsigned long v;
+  int div;
   if(m_pokey->m_audctl & CPokey::AUDCTL_DIVLOW) {
-    v = hz*452;
+    div =  (8769.0/hz) - 0.5;
   }
   else {
-    v = hz*113;
+    div =  (35695.0/hz) - 0.5;
   }  
-  int div = 4000000.0/v;
   if(div < 0 || div > 255)
     return 0;
-  return div;
+  return div;  
 }
 
 ///////////////////////////////////////////////////////////  
@@ -83,7 +82,7 @@ unsigned int CPokeyChannel::hz_to_div16(float hz)
   if(hz<1) {
     return 0;
   }  
-  unsigned long div = 1000000.0/hz;
+  unsigned long div = 0.5 + 1000000.0/hz;
   if(div < 0 || div > 65535)
     return 0;
   return div;
@@ -193,6 +192,11 @@ CPokey::CPokey(byte which)
   m_chan[1].configure(this, AUDF2, AUDC2, AUDF1,  AUDF4);
   m_chan[2].configure(this, AUDF3, AUDC3, NO_REG, NO_REG);
   m_chan[3].configure(this, AUDF4, AUDC4, AUDF3,  NO_REG);
+}
+
+///////////////////////////////////////////////////////////  
+void CPokey::test() {
+  m_chan[0].test();
 }
 
 ///////////////////////////////////////////////////////////  

@@ -55,6 +55,7 @@ public:
   float           m_fPortaStep;      // portamento pitch change per 8ms
   
   CLogicalChannel();  
+  void test();
   void assign(CLogicalVoice *voices, int voiceCount, TONE_CONFIG *conf);
   byte deleteNote(byte note);
   void handle(byte status, byte *params);

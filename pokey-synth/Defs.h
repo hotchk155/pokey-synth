@@ -62,11 +62,12 @@ enum {
   CC_ENV_2_LFO_RATE     = 89,
   CC_ENV_2_LFO_DEPTH    = 90,
   CC_ENV_2_ARP_RATE     = 91,
+  CC_ENV_2_MATRIX       = 92,
 
   CC_LFOMODE    = 106,
   CC_LFOWAVE    = 107,
   CC_LFORATE    = 108,
-  CC_LFODEPTH    = 109,
+  CC_LFO_2_MATRIX    = 109,
   CC_LFO_2_PITCH          = 110,
   CC_LFO_2_VOL          = 111,
   CC_LFO_2_DIST          = 112,
@@ -80,10 +81,10 @@ enum {
   CC_ARPCOUNT    = 118, 
   CC_ARP2ENV    = 119, 
 
-  CC_POKEYCFG   = 92,
-  CC_POKEYDUAL  = 93,
-  CC_POKEYRANGE   = 94,
-  CC_POKEYPOLY9   = 95,
+  CC_POKEYCFG   = 93,
+  CC_POKEYDUAL  = 94,
+  CC_POKEYRANGE   = 95,
+//  CC_POKEYPOLY9   = 95,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,7 +129,7 @@ typedef struct {
   
   enum {
      TO_VOL           = 0x01,           
-     TO_PITCH         = 0x02,
+//     TO_PITCH         = 0x02,
      TO_DIST          = 0x04,
      TO_HPF           = 0x08,
      TO_DETUNE        = 0x10,
@@ -144,7 +145,7 @@ typedef struct {
     ARP2ENV      = 0x08,
     POKEY_DUAL   = 0x10,
     POKEY_HIHZ   = 0x20,
-    POKEY_POLY9  = 0x40
+//    POKEY_POLY9  = 0x40
   };
 
   enum {
@@ -189,17 +190,23 @@ typedef struct {
   char            eLFOMode;         // LFO run mode
   float           fLFOStep;         // LFO run step (increment per 8ms of the 0.0-1.0 full range)
   char            eLFOWave;         // LFO wave form
-  char            lfoDepth;
   char            arpPeriod;        // time between consecutive arp notes (in 8ms increments)  
   char            arpCount;         // max notes to include in arpeggio
   ENVELOPE        ampEnv;
   ENVELOPE        modEnv;
+  
+  
   char            modEnv2Pitch;
+  char            modEnvDepth;
   byte            modEnvDest;
   byte            modEnvDestNeg;    
+  
+  char            lfo2Vol;
   char            lfo2Pitch;
+  char            lfoDepth;
   byte            lfoDest;
   byte            lfoDestNeg;
+  
   byte            modWheelDest;
   byte            modWheelDestNeg;
 } TONE_CONFIG;

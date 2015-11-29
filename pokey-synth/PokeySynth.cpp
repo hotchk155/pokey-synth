@@ -25,10 +25,16 @@ CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
+void CPokeySynth::test() 
+{
+  m_pokey1.test();
+}
+
+///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf) 
 {
   conf->ePokeyMode = CPokey::PCFG_8;
-  conf->flags = 0;
+  conf->flags = TONE_CONFIG::POKEY_HIHZ;
   conf->transpose = 0;
   conf->fFineTune = 0;
   conf->pitchBendRange = 5;
@@ -40,7 +46,6 @@ void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf)
   conf->eLFOMode = TONE_CONFIG::LFO_FREE;
   conf->fLFOStep = 0.0625;
   conf->eLFOWave = TONE_CONFIG::WAVE_TRI;
-  conf->lfoDepth = 0;
   conf->arpPeriod = 10;
   conf->arpCount = 3;  
   conf->ampEnv.fAttackStep = 1.0;
@@ -49,11 +54,18 @@ void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf)
   conf->modEnv.fAttackStep = 1.0;
   conf->modEnv.fReleaseStep = 1.0;
   conf->modEnv.mode = ENVELOPE::ATT_REL;  
+  conf->modEnv2Pitch = 0;
+  conf->modEnvDepth = 0;
+  conf->modEnvDest = 0;
+  conf->modEnvDestNeg = 0;       
+  conf->lfo2Vol = 0;
   conf->lfo2Pitch = 0;
+  conf->lfoDepth = 0;
   conf->lfoDest = 0;
-  conf->lfoDestNeg = 0;
+  conf->lfoDestNeg = 0;  
   conf->modWheelDest = 0;
   conf->modWheelDestNeg = 0;  
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -145,7 +157,7 @@ void CPokeySynth::init()
 
   m_controlPanel.led1(1);
   m_controlPanel.led2(1);  
-
+/*
   if(!m_storage.isInitialised()) {
     defaultToneConfig(&m_conf[0]);
     for(int i=0; i<m_storage.getNumPatches(); ++i) {
@@ -162,6 +174,8 @@ void CPokeySynth::init()
     m_storage.loadPatch(patch, &m_conf[0]);
     m_numPOKEYs = m_storage.getNumPokeys();    
   }
+*/  
+  defaultToneConfig(&m_conf[0]);//TODO REMOVE
   m_conf[1].ePokeyMode = CPokey::PCFG_NONE;
   
   configure();
@@ -186,8 +200,6 @@ byte voiceToUpdate = 0;
 byte wasHeld = 0;
 void CPokeySynth::run() 
 {
-//  m_pokey1.m_chan[0].test();
-//  return;
   int i;
   unsigned long ms = millis();
 
@@ -227,7 +239,7 @@ void CPokeySynth::run()
   byte midi = m_midiInput.read();
   if(midi)
   {
-    if((midi & 0x0F) == 0) {
+    if((midi & 0x0F) == 0) {  //TODO: channel assignment
       m_chan[0].handle(midi, m_midiInput.m_params);
       m_controlPanel.pulse();    
     }

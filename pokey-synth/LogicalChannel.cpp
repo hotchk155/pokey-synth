@@ -40,7 +40,8 @@ inline void untrigEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
 }
 
 ///////////////////////////////////////////////////////////////////////
-inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
+// result is 1 if envelope has finished
+inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {  
   switch(envState->ePhase) {               
     case ENVELOPE_STATE::ATTACK:
         envState->fValue += env->fAttackStep;
@@ -78,12 +79,12 @@ inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
             case ENVELOPE::ATT_DEC_RPT_REL:
             default:
               envState->ePhase = ENVELOPE_STATE::NONE;
-              break;
+              return 1;
           }
         }
         break; 
       }
-      return envState->ePhase;
+      return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -94,6 +95,11 @@ CLogicalChannel::CLogicalChannel()
   m_voices = NULL;
   m_voiceCount = 0;
   reset();
+}
+
+///////////////////////////////////////////////////////////////////////  
+void CLogicalChannel::test() {
+  m_voices[0].test();
 }
 
 ///////////////////////////////////////////////////////////////////////  
@@ -375,13 +381,13 @@ void CLogicalChannel::handleCC(char cc, char value)
       }
     }
     break;
-  case CC_POKEYPOLY9:
-    ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_POLY9, value); 
-    poly9(m_conf->flags & TONE_CONFIG::POKEY_POLY9); 
-    break;    
+//  case CC_POKEYPOLY9:
+//    ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_POLY9, value); 
+//    poly9(m_conf->flags & TONE_CONFIG::POKEY_POLY9); 
+//    break;    
   case CC_POKEYRANGE: 
     ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_HIHZ, value); 
-    range(!(m_conf->flags & TONE_CONFIG::POKEY_HIHZ)); 
+    range(!!(m_conf->flags & TONE_CONFIG::POKEY_HIHZ)); 
     break;    
   case CC_MIDIVEL: 
     ccFlag(&m_conf->flags, TONE_CONFIG::USE_VELOCITY, value); 
@@ -456,11 +462,36 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_LFOWAVE: 
     m_conf->eLFOWave = ccMapValue(value, TONE_CONFIG::WAVE_MAX); 
     break;    
-  case CC_LFODEPTH:
+      
+  // MOD MATRIX SETTINGS FOR LFO
+  case CC_LFO_2_PITCH:
+    m_conf->lfo2Pitch = value-64; 
+    break;    
+  case CC_LFO_2_VOL:
+    m_conf->lfo2Vol = value-64; 
+    break;
+  case CC_LFO_2_MATRIX:
     m_conf->lfoDepth = value; 
     break;        
+  case CC_LFO_2_DIST:
+    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_DIST, value); 
+    break;    
+  case CC_LFO_2_HPF:
+    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_HPF, value); 
+    break;    
+  case CC_LFO_2_DETUNE:
+    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_DETUNE, value); 
+    break;    
+  case CC_LFO_2_ARP_RATE:
+    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
+    break;    
+
+  // MOD MATRIX SETTINGS FOR MOD ENVELOPE          
   case CC_ENV_2_PITCH:
     m_conf->modEnv2Pitch = value-64; 
+    break;    
+  case CC_ENV_2_MATRIX:
+    m_conf->modEnvDepth = value-64; 
     break;    
   case CC_ENV_2_DISTORTION:
     ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_DIST, value); 
@@ -479,25 +510,9 @@ void CLogicalChannel::handleCC(char cc, char value)
     break;    
   case CC_ENV_2_ARP_RATE:
     ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
-    break;      
-  case CC_LFO_2_PITCH:
-    m_conf->lfo2Pitch = value-64; 
     break;    
-  case CC_LFO_2_VOL:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_VOL, value); 
-    break;    
-  case CC_LFO_2_DIST:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_DIST, value); 
-    break;    
-  case CC_LFO_2_HPF:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_HPF, value); 
-    break;    
-  case CC_LFO_2_DETUNE:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_DETUNE, value); 
-    break;    
-  case CC_LFO_2_ARP_RATE:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
-    break;    
+          
+  // MOD MATRIX SETTINGS FOR MOD WHEEL
   case CC_MOD_2_VOL:
     ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_VOL, value); 
     break;    
@@ -604,8 +619,9 @@ void CLogicalChannel::recalc_detune()
 void CLogicalChannel::runEnvelopes() 
 {
     for(int i=0; i<m_voiceCount; ++i) {       
-      if(ENVELOPE_STATE::NONE == runEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp)) {
-        m_voices[i].m_midi_note = 0;
+      if(runEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp)) {
+        m_voices[i].reset();
+//        m_voices[i].m_midi_note = 0;
       }
       runEnvelope(&m_conf->modEnv, &m_voices[i].m_mod);
     }

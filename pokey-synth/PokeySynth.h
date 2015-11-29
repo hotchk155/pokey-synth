@@ -32,6 +32,7 @@ public:
   CStorage m_storage;
 
   CPokeySynth();
+  void test();
   void init();
   void run();
 };

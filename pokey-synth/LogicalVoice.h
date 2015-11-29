@@ -23,6 +23,7 @@ public:
   void poly9(byte v);
   void update();
   void reset();
+  void test();
 };
 
 

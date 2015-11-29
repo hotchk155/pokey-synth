@@ -12,6 +12,10 @@
 //   VERSION HISTORY
 //   1 ddmmyy  initial version
 //   
+/*
+TODO:
+  option to set divider range automatically based on last note
+*/
 ///////////////////////////////////////////////////////////////////////////////////////////
 #include "Arduino.h"
 #include "EEPROM.h"
@@ -29,6 +33,7 @@ CPokeySynth PokeySynth;
 void setup()
 {  
   PokeySynth.init();
+//  PokeySynth.test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

@@ -130,5 +130,6 @@ class CPokey {
     void range(byte v);    
     void poly9(byte v);    
     byte isInstalled();
+    void test();
 };
 
