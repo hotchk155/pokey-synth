@@ -94,6 +94,7 @@ CLogicalChannel::CLogicalChannel()
   m_conf = NULL;
   m_voices = NULL;
   m_voiceCount = 0;
+  m_midiChannel = 0;
   reset();
 }
 
@@ -132,8 +133,8 @@ void CLogicalChannel::reset() {
 
 ///////////////////////////////////////////////////////////////////////
 // QUIET
-// Clear note stack 
 void CLogicalChannel::quiet() {
+  // clear the note stack
   m_noteCount = 0;
 }
 
@@ -838,7 +839,7 @@ void CLogicalChannel::runArpeggiator()
 }
 
 ///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::run(byte ticks)  
+void CLogicalChannel::update(byte ticks)  
 {
     switch(ticks & 0x7) {
       case 0: runEnvelopes(); 

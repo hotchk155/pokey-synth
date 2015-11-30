@@ -17,17 +17,21 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-CPokeySynth::CPokeySynth() : m_pokey1(0), m_pokey2(1)
+CPokeySynth::CPokeySynth()
 {
-  m_numPOKEYs = 1;
-  m_dualPatch = 0;
+  m_flags = 0;
   m_voiceCount = 0;
+  
+  m_lastTick = 0;
+//  m_ticks = 0;
+  m_voiceToUpdate = 0;  
+  m_channelCount = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::test() 
 {
-  m_pokey1.test();
+  m_pokey[0].test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -74,55 +78,57 @@ void CPokeySynth::configure()
 {
   int i;
 
-  // reset the voices
-  for(i=0; i<8; ++i) {
-    m_voice[i].reset();
-  }  
-  // reset the channels
-  m_chan[0].reset();
-  m_chan[1].reset();
+  // reset synth state
+  reset();
 
+  //TODO multi pokey
+  
+  // one channel (for now)
+  m_channelCount = 1;
+  
+  m_pokey[0].which(0);
+  m_pokey[1].which(1);
 
-  int voices1 = 0;
-  int voices2 = 0;
-  CPokeyChannel *physical_channels[8] = {0};
-  m_dualPatch = 0;
-    
-  // Configure POKEY1
-  voices1 = m_pokey1.configure(m_conf[0].ePokeyMode, !(m_conf[0].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[0]);
-  if(m_conf[0].flags & TONE_CONFIG::POKEY_DUAL) {
-    // first patch requires both chips
-    voices1 += m_pokey2.configure(m_conf[0].ePokeyMode, !(m_conf[0].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[voices1]);
-    m_chan[0].assign(&m_voice[0], voices1, &m_conf[0]);
-  }
-  else {
-    // can have two patches loaded
-    voices2 = m_pokey2.configure(m_conf[1].ePokeyMode, !(m_conf[1].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[voices1]);
-    m_chan[0].assign(&m_voice[0], voices1, &m_conf[0]);
-    if(voices2) {
-      m_chan[1].assign(&m_voice[voices1], voices2, &m_conf[1]);
-      m_dualPatch = 1;
-    }
-  }
-  m_voiceCount = 0;  
-  for(int i=0; i<voices1; ++i) {
-      m_voice[m_voiceCount++].assign(&m_chan[0], physical_channels[i]);      
+  // configure the POKEY chip based on current patch
+  CPokeyChannel *physical_channels[MAX_VOICE] = {0};      
+  m_voiceCount = m_pokey[0].configure(m_conf[0].ePokeyMode, !(m_conf[0].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[0]);
+  
+  // assign physical POKEY voices to logical voices
+  for(int i=0; i<m_voiceCount; ++i) {
+      m_voice[i].assign(&m_chan[0], physical_channels[i]);      
   }  
-  for(int i=voices1; i<voices1+voices2; ++i) {
-      m_voice[m_voiceCount++].assign(&m_chan[1], physical_channels[i]);      
-  }    
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
+// RESET ALL SYNTH STATE
+void CPokeySynth::reset() 
+{
+  int i;
+  for(i=0; i<MAX_POKEY; ++i) {
+    m_pokey[i].reset();
+  }  
+  for(i=0; i<MAX_VOICE; ++i) {
+    m_voice[i].reset();
+  }    
+  for(i=0; i<MAX_CHANNEL; ++i) {
+    m_chan[i].reset();
+  }  
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+// SILENCE ALL SYNTH OUTPUT
 void CPokeySynth::quiet() 
 {
-  m_pokey1.quiet();
-  m_pokey2.quiet();
-  for(int i=0; i<8; ++i) {
-    m_voice[i].reset();
+  int i;
+  for(i=0; i<MAX_POKEY; ++i) {
+    m_pokey[i].quiet();
+  }  
+  for(i=0; i<MAX_VOICE; ++i) {
+    m_voice[i].quiet();
+  }    
+  for(i=0; i<MAX_CHANNEL; ++i) {
+    m_chan[i].quiet();
   }
-  m_chan[0].quiet();
-  m_chan[1].quiet();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -180,6 +186,7 @@ void CPokeySynth::init()
   
   configure();
   delay(100);
+  /*
   m_midiInput.init();
   if(m_numPOKEYs > 1) {
     m_controlPanel.led1(0);
@@ -189,98 +196,48 @@ void CPokeySynth::init()
     m_controlPanel.led2(1);
     delay(200);
   }
+  */
   m_controlPanel.led1(0);
   m_controlPanel.led2(0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-byte lastTick = 0;
-byte ticks = 0;
-byte voiceToUpdate = 0;
-byte wasHeld = 0;
 void CPokeySynth::run() 
 {
   int i;
+  
+  // get the system millisecond counter
   unsigned long ms = millis();
 
-  byte buttonHold = m_controlPanel.m_buttonHold;
-  if(lastTick != (byte)ms) {    
-    m_controlPanel.run();
-    switch(buttonHold) {
-      case CControlPanel::HOLD:
-        m_controlPanel.led1(1);      
-        wasHeld = 1;
-        break;
-      case CControlPanel::LONGHOLD:
-        m_controlPanel.led1(!!(ms & 0x40));
-        wasHeld = 2;
-        break;
-      default:
-        if(wasHeld) {
-          quiet();
-          if(wasHeld == 2) {
-            configure();
-          }
-          m_controlPanel.led1(0);
-          wasHeld = 0;
-        }    
-        break;
-    }
-    m_voice[voiceToUpdate].update();
-    if(++voiceToUpdate >= m_voiceCount) {
-      voiceToUpdate = 0;
-    }
-    m_chan[0].run(ticks);
-    if(m_dualPatch) m_chan[1].run(ticks);
-    ++ticks;
-    lastTick = (byte)ms;
+  // have we moved on a millisecond?
+  if(m_lastTick != (byte)ms) {    
+    m_lastTick = (byte)ms;
+    
+    // update the channels (run LFO, envelope etc)
+    for(int i=0; i<m_channelCount; ++i) {
+      m_chan[i].update((byte)ms);
+    }    
+  }
+  else 
+  {
+    // maintain the voices
+    m_voice[m_voiceToUpdate].update();
+    if(++m_voiceToUpdate >= m_voiceCount) {
+      m_voiceToUpdate = 0;
+    }    
   }
   
+  // poll for MIDI input
   byte midi = m_midiInput.read();
   if(midi)
   {
-    if((midi & 0x0F) == 0) {  //TODO: channel assignment
-      m_chan[0].handle(midi, m_midiInput.m_params);
-      m_controlPanel.pulse();    
-    }
-    else if(((midi & 0x0F) == 1) && m_dualPatch)
-      m_chan[1].handle(midi, m_midiInput.m_params);
-      m_controlPanel.pulse();    
-    }
-    
-    if(m_chan[0].m_flags & CLogicalChannel::SF_RECONFIG) {
-      configure();
-      m_chan[0].m_flags &= ~CLogicalChannel::SF_RECONFIG;
-    }
-        
-    if(buttonHold && ((midi & 0xF0) == 0x90) && m_midiInput.m_params[1]) {
-      char patch = m_midiInput.m_params[0] % 12;
-      if(patch >= 0 && patch < m_storage.getNumPatches()) {
-        switch(buttonHold) {
-          case CControlPanel::HOLD:
-            m_controlPanel.led1(1);
-            m_controlPanel.led2(1);
-            m_storage.loadPatch(patch, &m_conf[0]);
-            m_storage.setCurrentPatch(patch);
-            delay(200);
-            configure();
-            m_controlPanel.led1(0);
-            m_controlPanel.led2(0);
-            wasHeld = 0;            
-            break;
-          case CControlPanel::LONGHOLD:
-            m_controlPanel.led1(1);
-            m_controlPanel.led2(1);
-            m_storage.savePatch(patch, &m_conf[0]);
-            m_storage.setCurrentPatch(patch);
-            delay(500);
-            m_controlPanel.led1(0);
-            m_controlPanel.led2(0);
-            wasHeld = 0;            
-            break;
-        }
+    // dispatch MIDI message to channels
+    for(i = 0; i<m_channelCount; ++i) {      
+      if((midi & 0x0F) == m_chan[i].m_midiChannel) {  
+        m_chan[i].handle(midi, m_midiInput.m_params);
       }
-    }
+    }        
+  }
 }
 
 

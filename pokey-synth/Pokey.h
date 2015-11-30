@@ -11,25 +11,28 @@ class CPokey;
 /////////////////////////////////////////////////////////
 class CPokeyChannel {
 
-  byte m_mode;
+//  byte m_mode;       // channel mode
   byte m_div_reg;    // address for freq divider register
   byte m_ctrl_reg;   // address for control register
   byte m_div2_reg;   // address for high freq divider register
-  byte m_hpf_reg;   // address for hpf
-  byte m_ctrl;   // data value for control register
-  byte m_flags;
+  byte m_hpf_reg;    // address for hpf
+  
+  byte m_ctrl;       // data value for control register
+  byte m_div;        // data value for first divider
+  byte m_div2;       // data value for second divider
+    
   CPokey *m_pokey;
   
   
 public:    
   ///////////////////////////////////////////////////////////  
   // Channel modes
-  enum {
-    CHAN_NONE, // not configured
-    CHAN_8,    // 8 bit
-    CHAN_16,   // 16 bit
-    CHAN_HPF   // 8 bit + hpf
-  };
+  //enum {
+  //  CHAN_NONE, // not configured
+  //  CHAN_8,    // 8 bit
+  //  CHAN_16,   // 16 bit
+  //  CHAN_HPF   // 8 bit + hpf
+  //};
   enum {
     DIST_NONE  = 0b11100000,
     DIST_4     = 0b11000000,
@@ -39,14 +42,11 @@ public:
     DIST_17    = 0b10000000,
     DIST_MASK  = 0b11100000,
   };
-  enum {
-    FLAG_NODIV = 0b00000001  // No divider set, so channel must be muted
-  };
   
   ///////////////////////////////////////////////////////////  
   CPokeyChannel();
   void configure(CPokey *pokey, byte div, byte ctrl, byte div2, byte hpf);
-  void mode(byte mode);
+  //void mode(byte mode);
   void reset();
   void quiet();
   void dist(int mode);
@@ -54,7 +54,8 @@ public:
   void hpf_lev(byte lev);  
   void dist_lev(byte lev);  
   void vol(byte level);
-  void hpf(int hz);
+  void hpf_hz(int hz);
+  void hpf_div(byte div);
   byte hz_to_div8(float hz);
   unsigned int hz_to_div16(float hz);
   void test();
@@ -104,12 +105,10 @@ class CPokey {
       PCFG_NONE      = 0,
       PCFG_8         = 1,   // supporting 4 channels with 8 bit divider
       PCFG_16        = 2,   // supporting two 16-bit channels
-      PCFG_8_16      = 3,   // supporting two 8-bit and one 16 bit channel
-      PCFG_8HPF      = 4,   // supporting 2 channels with 8 bit divider and 8 bit HPF
-      PCFG_8_8HPF    = 5   // supporting two 8-bit channels and one 8-bit channel with HPF
+      PCFG_8HPF      = 3    // supporting 2 channels with 8 bit divider and 8 bit HPF
     };
     enum {
-      FLAG_LOWHZ             = 0x01  // uSet dividers for 8 bit modes for low freq range
+      FLAG_LOWHZ             = 0x01  // Set dividers for 8 bit modes for low freq range
     };
 
     ///////////////////////////////////////////////////////////
@@ -120,7 +119,8 @@ class CPokey {
     CPokeyChannel m_chan[4];
     
     ///////////////////////////////////////////////////////////
-    CPokey(byte which);
+    CPokey();
+    void which(byte v);    
     int configure(int mode, byte lowhz, CPokeyChannel **channels);
     void write(byte addr, byte data);
     byte read(byte addr);

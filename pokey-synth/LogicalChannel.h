@@ -22,6 +22,7 @@ protected:
   byte m_voiceCount;       // number of logical voices assigned to the channel
 
   
+  
   void runEnvelopes();
   void runLFO(); 
   void runPortamento(); 
@@ -34,6 +35,7 @@ public:
     SF_LFOCOMPLETE  = 0x02,
     SF_RECONFIG     = 0x04
   };
+  byte m_midiChannel;
   byte m_flags;
   TONE_CONFIG *m_conf;
 
@@ -74,7 +76,7 @@ public:
   void quiet();
   void range(byte v);
   void poly9(byte v);
-  void run(byte ticks);
+  void update(byte ticks);
   
 };
 

@@ -55,10 +55,20 @@ void CLogicalVoice::reset()
 }
 
 ///////////////////////////////////////////////////////////////////////
+// SILENCE THE VOICE
+void CLogicalVoice::quiet()
+{
+  reset();
+}
+
+///////////////////////////////////////////////////////////////////////
 // SET THE DIVIDER RANGE
 void CLogicalVoice::range(byte v) {
   m_pch->range(v);
 }
+
+///////////////////////////////////////////////////////////////////////
+// SET THE DISTORTION POLYNOMIAL TYPE
 void CLogicalVoice::poly9(byte v) {
   m_pch->poly9(v);
 }
@@ -199,7 +209,7 @@ void CLogicalVoice::update()
   }
   
   // apply HPF to the channel
-  m_pch->hpf_lev(255.0 * value);    
+  m_pch->hpf_div(255.0 * value);    
 }
 
 
