@@ -33,13 +33,13 @@ CPokeySynth PokeySynth;
 void setup()
 {  
   PokeySynth.init();
-//  PokeySynth.test();
+  PokeySynth.test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 void loop() 
 {
-  PokeySynth.run();
+//  PokeySynth.run();
 }
 
 

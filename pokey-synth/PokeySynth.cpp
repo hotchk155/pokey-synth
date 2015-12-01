@@ -15,6 +15,8 @@
 #include "LogicalChannel.h"
 #include "PokeySynth.h"
 
+CPokey Pokey1(0);
+CPokey Pokey2(1);
 
 ///////////////////////////////////////////////////////////////////////////////////
 CPokeySynth::CPokeySynth()
@@ -31,13 +33,13 @@ CPokeySynth::CPokeySynth()
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::test() 
 {
-  m_pokey[0].test();
+  m_chan[0].test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf) 
 {
-  conf->ePokeyMode = CPokey::PCFG_8;
+  conf->ePokeyMode = CPokey::MODE_8BIT;
   conf->flags = TONE_CONFIG::POKEY_HIHZ;
   conf->transpose = 0;
   conf->fFineTune = 0;
@@ -86,17 +88,18 @@ void CPokeySynth::configure()
   // one channel (for now)
   m_channelCount = 1;
   
-  m_pokey[0].which(0);
-  m_pokey[1].which(1);
+  //m_pokey[0].which(0);
+//  m_pokey[1].which(1);
 
   // configure the POKEY chip based on current patch
-  CPokeyChannel *physical_channels[MAX_VOICE] = {0};      
-  m_voiceCount = m_pokey[0].configure(m_conf[0].ePokeyMode, !(m_conf[0].flags & TONE_CONFIG::POKEY_HIHZ), &physical_channels[0]);
+  byte voice[8] = {0};  
+  m_voiceCount = Pokey1.configure(m_conf[0].ePokeyMode, voice);
   
   // assign physical POKEY voices to logical voices
   for(int i=0; i<m_voiceCount; ++i) {
-      m_voice[i].assign(&m_chan[0], physical_channels[i]);      
-  }  
+      m_voice[i].assign(&m_chan[0], voice[i]);      
+  }   
+  m_chan[0].start();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -104,9 +107,6 @@ void CPokeySynth::configure()
 void CPokeySynth::reset() 
 {
   int i;
-  for(i=0; i<MAX_POKEY; ++i) {
-    m_pokey[i].reset();
-  }  
   for(i=0; i<MAX_VOICE; ++i) {
     m_voice[i].reset();
   }    
@@ -120,9 +120,6 @@ void CPokeySynth::reset()
 void CPokeySynth::quiet() 
 {
   int i;
-  for(i=0; i<MAX_POKEY; ++i) {
-    m_pokey[i].quiet();
-  }  
   for(i=0; i<MAX_VOICE; ++i) {
     m_voice[i].quiet();
   }    
@@ -182,12 +179,11 @@ void CPokeySynth::init()
   }
 */  
   defaultToneConfig(&m_conf[0]);//TODO REMOVE
-  m_conf[1].ePokeyMode = CPokey::PCFG_NONE;
   
   configure();
   delay(100);
-  /*
   m_midiInput.init();
+  /*
   if(m_numPOKEYs > 1) {
     m_controlPanel.led1(0);
     m_controlPanel.led2(0);
@@ -208,6 +204,8 @@ void CPokeySynth::run()
   
   // get the system millisecond counter
   unsigned long ms = millis();
+
+   digitalWrite(P_LED1, !(ms&0xFF));
 
   // have we moved on a millisecond?
   if(m_lastTick != (byte)ms) {    
@@ -231,12 +229,21 @@ void CPokeySynth::run()
   byte midi = m_midiInput.read();
   if(midi)
   {
-    // dispatch MIDI message to channels
-    for(i = 0; i<m_channelCount; ++i) {      
-      if((midi & 0x0F) == m_chan[i].m_midiChannel) {  
-        m_chan[i].handle(midi, m_midiInput.m_params);
-      }
-    }        
+    switch(midi & 0xF0) {
+        case 0x80: //  Note-off  2  key  velocity  
+        case 0x90: //  Note-on  2  key  veolcity  
+        case 0xB0: //  Continuous controller  2  controller #  controller value  
+        case 0xE0: //  Pitch bend  2  lsb (7 bits)  msb (7 bit      
+          // dispatch MIDI message to channels
+          for(i = 0; i<m_channelCount; ++i) {            
+            if((midi & 0x0F) == m_chan[i].m_midiChannel) {                
+//digitalWrite(P_LED2, HIGH);
+              
+              m_chan[i].handle(midi, m_midiInput.m_params);
+            }
+          }        
+          break;
+    }
   }
 }
 

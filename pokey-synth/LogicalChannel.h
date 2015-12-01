@@ -74,9 +74,10 @@ public:
   void recalc_detune();
   void reset();
   void quiet();
-  void range(byte v);
-  void poly9(byte v);
+  void div8_high(byte v);
+  void dist_poly9(byte v);
   void update(byte ticks);
+  void start();
   
 };
 

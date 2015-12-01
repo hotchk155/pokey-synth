@@ -24,21 +24,23 @@
 CLogicalVoice::CLogicalVoice()
 {
   m_lch = NULL;
-  m_pch = NULL;
+  m_voice = 0;
   reset();
 }
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalVoice::test() {
-  m_pch->test();
+  //m_pch->test();
+  //m_pch->pitch(200);
+//  m_pch->vol(15);
 }
 
 ///////////////////////////////////////////////////////////////////////
 // ASSIGN POKEY CHANNEL AND LOGICAL CHANNEL TO VOICE
-void CLogicalVoice::assign(CLogicalChannel *lch, CPokeyChannel *pch)
+void CLogicalVoice::assign(CLogicalChannel *lch, byte voice)
 {
-  m_pch = pch;
   m_lch = lch;  
+  m_voice = voice;
   reset();
 }
 
@@ -52,25 +54,29 @@ void CLogicalVoice::reset()
   m_amp.fValue = m_mod.fValue = 0.0;
   m_mod.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
   m_mod.fValue = m_mod.fValue = 0.0;
+  quiet();
 }
 
 ///////////////////////////////////////////////////////////////////////
 // SILENCE THE VOICE
 void CLogicalVoice::quiet()
 {
-  reset();
+  CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
+  pokey->vol(m_voice, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////
 // SET THE DIVIDER RANGE
-void CLogicalVoice::range(byte v) {
-  m_pch->range(v);
+void CLogicalVoice::div8_high(byte v) {
+  CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
+  pokey->div8_high(m_voice,v);
 }
 
 ///////////////////////////////////////////////////////////////////////
 // SET THE DISTORTION POLYNOMIAL TYPE
-void CLogicalVoice::poly9(byte v) {
-  m_pch->poly9(v);
+void CLogicalVoice::dist_poly9(byte v) {
+  CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
+  pokey->dist_poly9(m_voice,v);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -79,9 +85,8 @@ void CLogicalVoice::poly9(byte v) {
 // get applied to the assigned POKEY voice
 void CLogicalVoice::update() 
 {    
-  if(!m_lch || !m_pch) {
-    return;
-  }
+  CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
+
   float value;
   TONE_CONFIG *conf = m_lch->m_conf;
   
@@ -114,7 +119,7 @@ void CLogicalVoice::update()
   value = 440.0 * pow(2.0,((value-57.0)/12.0));
   
   // apply to POKEY channel
-  m_pch->pitch(value);
+  pokey->pitch(m_voice, value);
 
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -141,7 +146,7 @@ void CLogicalVoice::update()
   }
   
   // apply to POKEY channel
-  m_pch->vol(0.5 + 15 * value);
+  pokey->vol(m_voice, value);
   
   ////////////////////////////////////////////////////////////////////////////////
   // DISTORTION
@@ -175,7 +180,7 @@ void CLogicalVoice::update()
   }
   
   // apply final distortion value to channel
-  m_pch->dist_lev(127.0 * value);
+  pokey->dist(m_voice, value);
 
   ////////////////////////////////////////////////////////////////////////////////
   // HIGH PASS FILTER FREQ CALCULATION
@@ -209,7 +214,5 @@ void CLogicalVoice::update()
   }
   
   // apply HPF to the channel
-  m_pch->hpf_div(255.0 * value);    
+  pokey->hpf(m_voice, value);
 }
-
-

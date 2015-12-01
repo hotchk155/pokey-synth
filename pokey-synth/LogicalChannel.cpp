@@ -113,6 +113,13 @@ void CLogicalChannel::assign(CLogicalVoice *voices, int voiceCount, TONE_CONFIG 
 }
 
 ///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::start() {
+  for(int i=0; i<m_voiceCount; ++i) {
+    m_voices[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
+  }
+}
+
+///////////////////////////////////////////////////////////////////////
 // RESET 
 // Resets channel state
 void CLogicalChannel::reset() {
@@ -356,14 +363,14 @@ void CLogicalChannel::handleCC(char cc, char value)
       byte mode;
       switch(ccMapValue(value, TONE_CONFIG::POKEY_MAX)) {
         case TONE_CONFIG::POKEY_8_HPF:
-          mode = CPokey::PCFG_8HPF;
+          mode = CPokey::MODE_8BITHPF;
           break;        
         case TONE_CONFIG::POKEY_16:
-          mode = CPokey::PCFG_16;
+          mode = CPokey::MODE_16BIT;
           break;        
         case TONE_CONFIG::POKEY_8:  
         default:
-          mode = CPokey::PCFG_8;
+          mode = CPokey::MODE_8BIT;
           break;
       }
       if(mode != m_conf->ePokeyMode) {
@@ -388,7 +395,7 @@ void CLogicalChannel::handleCC(char cc, char value)
 //    break;    
   case CC_POKEYRANGE: 
     ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_HIHZ, value); 
-    range(!!(m_conf->flags & TONE_CONFIG::POKEY_HIHZ)); 
+    div8_high(!!(m_conf->flags & TONE_CONFIG::POKEY_HIHZ)); 
     break;    
   case CC_MIDIVEL: 
     ccFlag(&m_conf->flags, TONE_CONFIG::USE_VELOCITY, value); 
@@ -565,15 +572,15 @@ void CLogicalChannel::handle(byte status, byte *params)
 }
 
 ///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::range(byte v) {
+void CLogicalChannel::div8_high(byte v) {
   for(int i=0; i<m_voiceCount; ++i) {
-    m_voices[i].range(v);
+    m_voices[i].div8_high(v);
   }
 }
 ///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::poly9(byte v) {
+void CLogicalChannel::dist_poly9(byte v) {
   for(int i=0; i<m_voiceCount; ++i) {
-    m_voices[i].poly9(v);
+    m_voices[i].dist_poly9(v);
   }
 }
 

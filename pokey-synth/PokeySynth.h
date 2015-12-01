@@ -31,7 +31,7 @@ public:
   CControlPanel m_controlPanel;    
 
   // List of physcial POKEY devices
-  CPokey m_pokey[MAX_POKEY];
+//  CPokey m_pokey[MAX_POKEY];
 
   // The loaded "patches"
   TONE_CONFIG m_conf[MAX_CHANNEL];

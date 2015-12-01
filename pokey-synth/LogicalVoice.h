@@ -3,11 +3,17 @@
 // hotchk155/2015
 ///////////////////////////////////////////////////////////
 class CLogicalChannel;
+
+extern CPokey Pokey1;
+extern CPokey Pokey2;
+
+#define VOICE_POKEY2 0x80  // OR'd with the voice to indicate POKEY2 
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 class CLogicalVoice 
 {  
   CLogicalChannel *m_lch;
-  CPokeyChannel *m_pch;
+  byte m_voice;  // physical POKEY voice number
 
 public:  
   ENVELOPE_STATE m_amp;
@@ -20,9 +26,9 @@ public:
   
   
   CLogicalVoice();
-  void assign(CLogicalChannel *lch, CPokeyChannel *pch);
-  void range(byte v);
-  void poly9(byte v);
+  void assign(CLogicalChannel *lch, byte voice);
+  void div8_high(byte v);
+  void dist_poly9(byte v);
   void update();
   void reset();
   void quiet();
