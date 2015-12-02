@@ -27,13 +27,24 @@ TODO:
 #include "ControlPanel.h"
 #include "Storage.h"
 #include "PokeySynth.h"
+#include "Testing.h"
+
+// The synth data is stored in these global variables. It would be better to encapsulate
+// the data in parent objects, but this saves memory by allowing use to reference the 
+// objects by 8 bit index rather than pointer
+CPokey Pokey1(0);
+CPokey Pokey2(1);
+CLogicalChannel Channel[MAX_CHANNEL];
+CLogicalVoice Voice[MAX_VOICE];
 CPokeySynth PokeySynth;
 
 ///////////////////////////////////////////////////////////////////////////////////
 void setup()
 {  
-  PokeySynth.init();
-  PokeySynth.test();
+  PokeySynth.initIO();
+  pokeyTest1();
+  //PokeySynth.init();
+  //PokeySynth.test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

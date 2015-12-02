@@ -15,8 +15,6 @@
 #include "LogicalChannel.h"
 #include "PokeySynth.h"
 
-CPokey Pokey1(0);
-CPokey Pokey2(1);
 
 ///////////////////////////////////////////////////////////////////////////////////
 CPokeySynth::CPokeySynth()
@@ -28,12 +26,6 @@ CPokeySynth::CPokeySynth()
 //  m_ticks = 0;
   m_voiceToUpdate = 0;  
   m_channelCount = 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-void CPokeySynth::test() 
-{
-  m_chan[0].test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -97,9 +89,9 @@ void CPokeySynth::configure()
   
   // assign physical POKEY voices to logical voices
   for(int i=0; i<m_voiceCount; ++i) {
-      m_voice[i].assign(&m_chan[0], voice[i]);      
+      Voice[i].assign(0, voice[i]);      
   }   
-  m_chan[0].start();
+  Channel[0].start();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -108,10 +100,10 @@ void CPokeySynth::reset()
 {
   int i;
   for(i=0; i<MAX_VOICE; ++i) {
-    m_voice[i].reset();
+    Voice[i].reset();
   }    
   for(i=0; i<MAX_CHANNEL; ++i) {
-    m_chan[i].reset();
+    Channel[i].reset();
   }  
 }
 
@@ -121,15 +113,15 @@ void CPokeySynth::quiet()
 {
   int i;
   for(i=0; i<MAX_VOICE; ++i) {
-    m_voice[i].quiet();
+    Voice[i].quiet();
   }    
   for(i=0; i<MAX_CHANNEL; ++i) {
-    m_chan[i].quiet();
+    Channel[i].quiet();
   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void CPokeySynth::init()
+void CPokeySynth::initIO() 
 {
   pinMode(P_AD0, OUTPUT);
   pinMode(P_AD1, OUTPUT);
@@ -155,7 +147,12 @@ void CPokeySynth::init()
 
   digitalWrite(P_RW, LOW);
   digitalWrite(P_CS1, HIGH);
-  digitalWrite(P_CS0, HIGH);
+  digitalWrite(P_CS0, HIGH);  
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+void CPokeySynth::init()
+{
 
 
   m_controlPanel.led1(1);
@@ -213,13 +210,13 @@ void CPokeySynth::run()
     
     // update the channels (run LFO, envelope etc)
     for(int i=0; i<m_channelCount; ++i) {
-      m_chan[i].update((byte)ms);
+      Channel[i].update((byte)ms);
     }    
   }
   else 
   {
     // maintain the voices
-    m_voice[m_voiceToUpdate].update();
+    Voice[m_voiceToUpdate].update();
     if(++m_voiceToUpdate >= m_voiceCount) {
       m_voiceToUpdate = 0;
     }    
@@ -236,10 +233,10 @@ void CPokeySynth::run()
         case 0xE0: //  Pitch bend  2  lsb (7 bits)  msb (7 bit      
           // dispatch MIDI message to channels
           for(i = 0; i<m_channelCount; ++i) {            
-            if((midi & 0x0F) == m_chan[i].m_midiChannel) {                
+            if((midi & 0x0F) == Channel[i].m_midiChannel) {                
 //digitalWrite(P_LED2, HIGH);
               
-              m_chan[i].handle(midi, m_midiInput.m_params);
+              Channel[i].handle(midi, m_midiInput.m_params);
             }
           }        
           break;

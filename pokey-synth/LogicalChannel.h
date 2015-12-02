@@ -1,27 +1,49 @@
 ///////////////////////////////////////////////////////////
+//
+// LOGICAL CHANNEL
+//
 // POKEYPIG
 // hotchk155/2015
+//
 ///////////////////////////////////////////////////////////
+
+
+// Logical Channel object manages a set of "voices" that 
+// play together, either as a polyphonic set of notes or
+// a unison set of notes. All the voices play the same 
+// POKEY sound and are triggered from the same MIDI channel
 
 class CLogicalChannel 
 {
-protected:  
-
+  // The channel maintains a "note stack" of all the MIDI notes
+  // that are currently "held" on the channel. This means that
+  // when we run out of polyphony we can "steal" a voice from an
+  // older note, but give it back whenif the newer note is released
+  // first
   typedef struct {
-    byte note;
-    byte velocity;
+    byte note;      // MIDI note (0-127)
+    byte velocity;  // MIDI velocity (0-127)
   } NOTE;
+  
+  // This is the maximum number of MIDI notes that we can hold in 
+  // the note stack at a time
   enum {
     MAX_NOTES = 10
   };  
 
-  NOTE m_notes[MAX_NOTES];  // notes that are currently held
-  byte m_noteCount;         // numer of notes that are held
-
-  CLogicalVoice *m_voices; // pointer to the first logical voice assigned to this channel
-  byte m_voiceCount;       // number of logical voices assigned to the channel
-
+  // The note stack
+  NOTE m_notes[MAX_NOTES]; 
   
+  // The number of notes in the stack
+  byte m_noteCount; 
+
+  // This channel manages a contiguous set of voices in the Voice[] array.
+  // These members store the index of the first voice and 1 + the index of 
+  // the last voice managed by this channel
+  char m_voiceBegin; 
+  char m_voiceEnd;   
+
+public:  
   
   void runEnvelopes();
   void runLFO(); 
@@ -57,8 +79,7 @@ public:
   float           m_fPortaStep;      // portamento pitch change per 8ms
   
   CLogicalChannel();  
-  void test();
-  void assign(CLogicalVoice *voices, int voiceCount, TONE_CONFIG *conf);
+  void assign(byte voiceBase, byte voiceCount, TONE_CONFIG *conf);
   byte deleteNote(byte note);
   void handle(byte status, byte *params);
   void handleNoteOn(byte note, byte velocity);
@@ -81,6 +102,8 @@ public:
   
 };
 
+// Declare the global channel instances
+extern CLogicalChannel Channel[MAX_CHANNEL];
 
 
 

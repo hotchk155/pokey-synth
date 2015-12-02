@@ -1,18 +1,11 @@
 ///////////////////////////////////////////////////////////
+//
+// LOGICAL VOICE
+//
 // POKEYPIG
 // hotchk155/2015
 ///////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////
-//
-// LOGICAL VOICE
-//
-// A logical voice is owned by a logical channel, and is 
-// itself assigned a physical POKEY voice. The logical voice
-// is a proxy to the physical voice - it controls and modulates
-// the physical voice
-//
-///////////////////////////////////////////////////////////
 #include "Arduino.h"
 #include "Defs.h"
 #include "Pokey.h"
@@ -23,25 +16,17 @@
 // CONSTRUCTOR
 CLogicalVoice::CLogicalVoice()
 {
-  m_lch = NULL;
+  m_channel = 0;
   m_voice = 0;
   reset();
 }
 
 ///////////////////////////////////////////////////////////////////////
-void CLogicalVoice::test() {
-  //m_pch->test();
-  //m_pch->pitch(200);
-//  m_pch->vol(15);
-}
-
-///////////////////////////////////////////////////////////////////////
 // ASSIGN POKEY CHANNEL AND LOGICAL CHANNEL TO VOICE
-void CLogicalVoice::assign(CLogicalChannel *lch, byte voice)
+void CLogicalVoice::assign(byte channel, byte voice)
 {
-  m_lch = lch;  
+  m_channel = channel;  
   m_voice = voice;
-  reset();
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -54,7 +39,6 @@ void CLogicalVoice::reset()
   m_amp.fValue = m_mod.fValue = 0.0;
   m_mod.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
   m_mod.fValue = m_mod.fValue = 0.0;
-  quiet();
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -88,22 +72,24 @@ void CLogicalVoice::update()
   CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
 
   float value;
-  TONE_CONFIG *conf = m_lch->m_conf;
+  
+  CLogicalChannel *channel = &Channel[m_channel];
+  TONE_CONFIG *conf = channel->m_conf;
   
   ////////////////////////////////////////////////////////////////////////////////
   // PITCH CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
   
   // get initial value
-  if(m_lch->m_portaTargetNote) {
-    value = m_lch->m_fPortamentoNote;
+  if(channel->m_portaTargetNote) {
+    value = channel->m_fPortamentoNote;
   }
   else {
     value = m_midi_note;
   }
   
   // add transpose, detune, pitch bend
-  value = value + (m_detuneFactor * m_lch->m_fDetuneStep) + m_lch->m_fPitchBend + conf->transpose + conf->fFineTune;
+  value = value + (m_detuneFactor * channel->m_fDetuneStep) + channel->m_fPitchBend + conf->transpose + conf->fFineTune;
   
   // add envelope modulation
   if(conf->modEnv2Pitch) {
@@ -112,7 +98,7 @@ void CLogicalVoice::update()
   
   // add LFO modulation
   if(conf->lfo2Pitch) {
-    value = value + m_lch->m_fLFO * conf->lfo2Pitch/(63.0/12.0);
+    value = value + channel->m_fLFO * conf->lfo2Pitch/(63.0/12.0);
   }  
   
   // calculate hz value
@@ -131,18 +117,18 @@ void CLogicalVoice::update()
 
   // apply LFO modulation  
   if(conf->lfoDest & TONE_CONFIG::TO_VOL) {
-    value *= m_lch->m_fLFO;
+    value *= channel->m_fLFO;
   }
   else if(conf->lfoDestNeg & TONE_CONFIG::TO_VOL) {
-    value *= (1.0-m_lch->m_fLFO);
+    value *= (1.0-channel->m_fLFO);
   }
 
   // apply mod wheel modulation
   if(conf->modWheelDest & TONE_CONFIG::TO_VOL) {
-    value *= m_lch->m_fModWheel;
+    value *= channel->m_fModWheel;
   }
   else if(conf->modWheelDestNeg & TONE_CONFIG::TO_VOL) {
-    value *= (1.0-m_lch->m_fModWheel);
+    value *= (1.0-channel->m_fModWheel);
   }
   
   // apply to POKEY channel
@@ -165,18 +151,18 @@ void CLogicalVoice::update()
   
   // LFO modulation
   if(conf->lfoDest & TONE_CONFIG::TO_DIST) {
-    value *= m_lch->m_fLFO;
+    value *= channel->m_fLFO;
   }
   else if(conf->lfoDestNeg & TONE_CONFIG::TO_DIST) {
-    value *= (1.0 - m_lch->m_fLFO);
+    value *= (1.0 - channel->m_fLFO);
   }
 
   // mod wheel
   if(conf->modWheelDest & TONE_CONFIG::TO_DIST) {
-    value *= m_lch->m_fModWheel;
+    value *= channel->m_fModWheel;
   }
   else if(conf->modWheelDestNeg & TONE_CONFIG::TO_DIST) {
-    value *= (1.0-m_lch->m_fModWheel);
+    value *= (1.0-channel->m_fModWheel);
   }
   
   // apply final distortion value to channel
@@ -199,18 +185,18 @@ void CLogicalVoice::update()
 
   // apply LFO modulation
   if(conf->lfoDest & TONE_CONFIG::TO_HPF) {
-    value *= m_lch->m_fLFO;
+    value *= channel->m_fLFO;
   }
   else if(conf->lfoDestNeg & TONE_CONFIG::TO_HPF) {
-    value *= (1.0 - m_lch->m_fLFO);
+    value *= (1.0 - channel->m_fLFO);
   }  
   
   // apply mod wheel
   if(conf->modWheelDest & TONE_CONFIG::TO_HPF) {
-    value *= m_lch->m_fModWheel;
+    value *= channel->m_fModWheel;
   }
   else if(conf->modWheelDestNeg & TONE_CONFIG::TO_HPF) {
-    value *= (1.0-m_lch->m_fModWheel);
+    value *= (1.0-channel->m_fModWheel);
   }
   
   // apply HPF to the channel

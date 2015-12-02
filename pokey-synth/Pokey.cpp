@@ -8,7 +8,7 @@
 #include "PortIO.h"
 #include "Pokey.h"
 
-// POKEY write address
+// POKEY register write address
 enum {
   REG_AUDF1   = 0x00, // Chan 1 frequency divider
   REG_AUDC1   = 0x01, // Chanl 1 control register
@@ -27,6 +27,8 @@ enum {
   REG_SKCTL   = 0x0f, // Serial port control  
   REG_NONE  = 0xff  // not applicable place holder 
 };
+
+// Bit flags for the AUDCTL register
 enum {
   AUDCTL_9BITPOLY          = 0x80,
   AUDCTL_CHAN1NODIV        = 0x40,
@@ -37,6 +39,8 @@ enum {
   AUDCTL_CHAN2HPF          = 0x02,
   AUDCTL_DIVLOW            = 0x01
 };
+
+// Distortion types
 enum {
   DIST_NONE  = 0b11100000,
   DIST_4     = 0b11000000,
@@ -45,17 +49,18 @@ enum {
   DIST_5_17  = 0b00000000,
   DIST_17    = 0b10000000
 };
-enum {
-  FLAG_DIV16    = 0x01,
-  FLAG_HPF      = 0x02,
-  FLAG_POKEY2   = 0x80,
-};
 
+// Lookup tables of registers for each voice 0..3
 const byte Control[4] =  {REG_AUDC1, REG_AUDC2, REG_AUDC3, REG_AUDC4};
 const byte Divider[4] =  {REG_AUDF1, REG_AUDF2, REG_AUDF3, REG_AUDF4};
 const byte Divider2[4] = {REG_NONE,  REG_AUDF1, REG_NONE,  REG_AUDF3};
 const byte HighPass[4] = {REG_AUDF3, REG_AUDF4, REG_NONE,  REG_NONE};
 
+///////////////////////////////////////////////////////////  
+//
+// HELPER FUNCTIONS
+//
+///////////////////////////////////////////////////////////  
 
 ///////////////////////////////////////////////////////////  
 // FETCH 8 BIT DIVIDER VALUE FOR A SPECIFIC HZ FREQ IN LO RANGE
@@ -96,28 +101,34 @@ inline unsigned int hz_to_div16(float hz)
   return div;
 }
 
+///////////////////////////////////////////////////////////  
+//
+// POKEY CHIP OBJECT
+//
+///////////////////////////////////////////////////////////  
+
 ///////////////////////////////////////////////////////////    
+// CONSTRUCTOR
 CPokey::CPokey(byte which) {
   m_flags = 0;
   if(which) {
     m_flags |= FLAG_POKEY2;
   }
-  for(int i=0;i<16;++i) {
+  for(int i=0;i<sizeof(m_data);++i) {
     m_data[i] = 0;    
   }
 }
 
 ///////////////////////////////////////////////////////////
+// REGISTER WRITE
 void CPokey::write_reg(byte addr, byte data, byte force) 
 { 
   // we only write values to addresses 0..REG_AUDCTL
   // if the value has changed from the previous write
-  if(m_data[addr] <= REG_AUDCTL)
+  if(addr < sizeof(m_data))
   {
-    if(m_data[addr] == data && !force) {
-      // same value
+    if(m_data[addr] == data && !force)
       return;
-    }
     m_data[addr] = data;
   }
   
@@ -152,20 +163,29 @@ void CPokey::write_reg(byte addr, byte data, byte force)
 }    
 
 ///////////////////////////////////////////////////////////    
-void CPokey::reset() {
+// RESET ALL REGISTERS
+void CPokey::reset_regs() {
   for(int i=0;i<16;++i) {
     write_reg(i, 0, 1);
   }
+  write_reg(REG_AUDC1,DIST_NONE);  
+  write_reg(REG_AUDC2,DIST_NONE);  
+  write_reg(REG_AUDC3,DIST_NONE);  
+  write_reg(REG_AUDC4,DIST_NONE);  
   write_reg(REG_IRQEN,0);
 }
 
 ///////////////////////////////////////////////////////////  
+// CONFIGURE THE POKEY FOR A VOICE MODE
+// Returns number of voices and passes out the voice 
+// indexes to *voices
 int CPokey::configure(int mode, byte *voices) {
 
-  reset();  
-  m_flags &= ~(FLAG_DIV16|FLAG_HPF);
+  reset_regs();  
   
   byte num_voices = 0;
+  m_flags &= ~(FLAG_DIV16|FLAG_HPF);
+  
   switch(mode) {
   case MODE_16BIT:
     m_flags |= FLAG_DIV16;
@@ -179,7 +199,7 @@ int CPokey::configure(int mode, byte *voices) {
     voices[num_voices++] = 0;
     voices[num_voices++] = 1;
     break;
-  default:    
+  default: // 8 BIT
     voices[num_voices++] = 0;
     voices[num_voices++] = 1;
     voices[num_voices++] = 2;
@@ -192,17 +212,17 @@ int CPokey::configure(int mode, byte *voices) {
 }
 
 //////////////////////////////////////////////////
+// SET PITCH OF A VOICE
 void CPokey::pitch(byte voice, float hz) {
-    voice &= 3; // ensure voice is in 0..3 range!
-    
-    if(m_flags & FLAG_DIV16) {
+
+  if(m_flags & FLAG_DIV16) {
       unsigned int v = hz_to_div16(hz);
       if(!v) {
         vol(voice,0);
       }
       else {
-        write_reg(Divider[voice], v>>8);
-        write_reg(Divider2[voice], (byte)v);
+        write_reg(Divider[voice&3], v>>8);
+        write_reg(Divider2[voice&3], (byte)v);
       }
     } 
     else {      
@@ -217,24 +237,25 @@ void CPokey::pitch(byte voice, float hz) {
         vol(voice,0);
       }
       else {
-        write_reg(Divider[voice], v);
+        write_reg(Divider[voice&3], v);
       }
     }
 }
 
 //////////////////////////////////////////////////
+// SET VOLUME OF A VOICE
 void CPokey::vol(byte voice, float v) {
-  voice &= 3;
-  byte ctrl_reg = Control[voice];
+  byte ctrl_reg = Control[voice&3];
   write_reg(ctrl_reg, (m_data[ctrl_reg] & 0xF0)|(byte)(0.5+15.0*v));
 }
 
 //////////////////////////////////////////////////
+// SET DISTORION LEVEL OF A VOICE
 void CPokey::dist(byte voice, float v) {
   byte ctrl_reg = Control[voice&3];  
   switch((byte)(v*6.0)) {
     case 0:
-      write_reg(ctrl_reg, (m_data[ctrl_reg] & 0x0F));
+      write_reg(ctrl_reg, (m_data[ctrl_reg] & 0x0F)|DIST_NONE);
       break;
     case 1:
       write_reg(ctrl_reg, (m_data[ctrl_reg] & 0x0F)|DIST_4);
@@ -255,6 +276,7 @@ void CPokey::dist(byte voice, float v) {
 }
 
 //////////////////////////////////////////////////
+// SET HIGH PASS FILTER DIVIDER OF A VOICE
 void CPokey::hpf(byte voice, float v) {
   if(m_flags & FLAG_HPF) {
     write_reg(HighPass[voice&3], v);
@@ -262,6 +284,8 @@ void CPokey::hpf(byte voice, float v) {
 }
   
 //////////////////////////////////////////////////
+// SET DIVIDER RANGE OF A VOICE
+// affects all 8-bit voices on the chip
 void CPokey::div8_high(byte voice, byte v) {
     if(v) {
       write_reg(REG_AUDCTL, m_data[REG_AUDCTL] & ~AUDCTL_DIVLOW);
@@ -272,6 +296,8 @@ void CPokey::div8_high(byte voice, byte v) {
 }
 
 //////////////////////////////////////////////////
+// SET DIST POLY 9-BIT MODE
+// affects all voices on the chip
 void CPokey::dist_poly9(byte voice, byte v) {
     if(v) {
       write_reg(REG_AUDCTL, m_data[REG_AUDCTL] | AUDCTL_9BITPOLY);
@@ -279,4 +305,13 @@ void CPokey::dist_poly9(byte voice, byte v) {
     else {
       write_reg(REG_AUDCTL, m_data[REG_AUDCTL] & ~AUDCTL_9BITPOLY);
     }
+}
+
+///////////////////////////////////////////////////////////  
+void CPokey::test() {
+  write_reg(8, B01010000,1); // lsbit 0=higher 1=lower freq
+  write_reg(0, 2,1); //lsb
+  write_reg(1, 0,1);
+  write_reg(2, 10,1); //msb
+  write_reg(3, 0b10101111,1);
 }

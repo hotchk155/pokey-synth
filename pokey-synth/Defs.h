@@ -22,6 +22,13 @@
 #define P_LED2    17
 #define P_BUTTON    19
 
+
+enum {
+  MAX_CHANNEL = 2,
+  MAX_VOICES_PER_CHANNEL = 4,
+  MAX_VOICE = (MAX_CHANNEL * MAX_VOICES_PER_CHANNEL)    
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // CONTROLLER NUMBERS
 enum {  
@@ -211,4 +218,6 @@ typedef struct {
   byte            modWheelDestNeg;
 } TONE_CONFIG;
 
+extern void failTest(int t);
+#define TEST_CONDITION(c, t) { if(!(c)) failTest(t); }
 

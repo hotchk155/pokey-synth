@@ -92,30 +92,25 @@ inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
 CLogicalChannel::CLogicalChannel() 
 {
   m_conf = NULL;
-  m_voices = NULL;
-  m_voiceCount = 0;
+  m_voiceBegin = 0;
+  m_voiceEnd = 0;
   m_midiChannel = 0;
   reset();
 }
 
 ///////////////////////////////////////////////////////////////////////  
-void CLogicalChannel::test() {
-  m_voices[0].test();
-}
-
-///////////////////////////////////////////////////////////////////////  
 // Assign logical voices and configuration to the channel
-void CLogicalChannel::assign(CLogicalVoice *voices, int voiceCount, TONE_CONFIG *conf)
+void CLogicalChannel::assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf)
 {
-  m_voices = voices;
-  m_voiceCount = voiceCount;
+  m_voiceBegin = voiceBegin;
+  m_voiceEnd = m_voiceEnd;
   m_conf = conf;
 }
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::start() {
-  for(int i=0; i<m_voiceCount; ++i) {
-    m_voices[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
   }
 }
 
@@ -224,8 +219,8 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
       m_portaTargetNote = 0;
     }
 
-    for(int i=0; i<m_voiceCount; ++i) {
-      voice = &m_voices[i];
+    for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+      voice = &Voice[i];
       voice->m_midi_note = note;
       voice->m_midi_vel = velocity;
       if(trigEnv) {
@@ -238,26 +233,26 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
   {
     // check if the note is already assigned to a channel...
     // if it is, then retrigger it
-    for(int i=0; i<m_voiceCount; ++i) {
-      if(m_voices[i].m_midi_note == note) {
-        voice = &m_voices[i];
+    for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+      if(Voice[i].m_midi_note == note) {
+        voice = &Voice[i];
         break;
       }
     }
     if(!voice) {
       // Otherwise do we have a free channel?
-      for(int i=0; i<m_voiceCount; ++i) {
-        if(m_voices[i].m_amp.ePhase == ENVELOPE_STATE::NONE) {
-          voice = &m_voices[i];
+      for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+        if(Voice[i].m_amp.ePhase == ENVELOPE_STATE::NONE) {
+          voice = &Voice[i];
           break;
         }
       }
     }
     if(!voice) {
       // or failing that, one that is in release
-      for(int i=0; i<m_voiceCount; ++i) {
-        if(m_voices[i].m_amp.ePhase == ENVELOPE_STATE::RELEASE) {
-          voice = &m_voices[i];
+      for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+        if(Voice[i].m_amp.ePhase == ENVELOPE_STATE::RELEASE) {
+          voice = &Voice[i];
           break;
         }
       }
@@ -275,10 +270,10 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::untrig(byte note) {
-  for(int i=0; i<m_voiceCount; ++i) {
-    if(m_voices[i].m_midi_note == note) {      
-      untrigEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp);
-      untrigEnvelope(&m_conf->modEnv, &m_voices[i].m_mod);
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    if(Voice[i].m_midi_note == note) {      
+      untrigEnvelope(&m_conf->ampEnv, &Voice[i].m_amp);
+      untrigEnvelope(&m_conf->modEnv, &Voice[i].m_mod);
     }
   }
 }
@@ -319,9 +314,10 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
   // place the new note at the top of the stack
   m_notes[m_noteCount-1].note = note;
   m_notes[m_noteCount-1].velocity = velocity;    
-  if(!(m_conf->flags & TONE_CONFIG::UNISON) && (m_noteCount > m_voiceCount)) {    
+  int voiceCount = m_voiceEnd - m_voiceBegin;
+  if(!(m_conf->flags & TONE_CONFIG::UNISON) && (m_noteCount > voiceCount)) {    
     // more notes than voices, so mute the oldest note
-    int nextMute = m_noteCount-m_voiceCount-1;
+    int nextMute = m_noteCount-voiceCount-1;
     untrig(m_notes[nextMute].note);
   }
   // trigger the newest note
@@ -335,7 +331,7 @@ void CLogicalChannel::handleNoteOff(byte note)
   untrig(note);
   if(deleteNote(note)) {
 
-    int voiceCount = (m_conf->flags & TONE_CONFIG::UNISON)? 1:m_voiceCount;
+    int voiceCount = (m_conf->flags & TONE_CONFIG::UNISON)? 1:(m_voiceEnd - m_voiceBegin);
     if(m_noteCount >= voiceCount) {      
       // all voices were in use.. we might be able to 
       // reactivate a note that was previously overridden
@@ -573,14 +569,14 @@ void CLogicalChannel::handle(byte status, byte *params)
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::div8_high(byte v) {
-  for(int i=0; i<m_voiceCount; ++i) {
-    m_voices[i].div8_high(v);
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].div8_high(v);
   }
 }
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::dist_poly9(byte v) {
-  for(int i=0; i<m_voiceCount; ++i) {
-    m_voices[i].dist_poly9(v);
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].dist_poly9(v);
   }
 }
 
@@ -589,7 +585,8 @@ void CLogicalChannel::dist_poly9(byte v) {
 void CLogicalChannel::recalc_detune()
 {
   // calculate the detune for each voice
-  for(int i=0; i<m_voiceCount; ++i)
+  int seq = 0;
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) 
   {
     int mult = 0;
     switch(m_conf->eDetuneMode)
@@ -599,19 +596,19 @@ void CLogicalChannel::recalc_detune()
       // unadjusted note
     case TONE_CONFIG::DETUNE_FINE:
     case TONE_CONFIG::DETUNE_SPREAD:
-      if(!i) mult = 0;
-      else if(i&1) mult = (i+1)/2;
-      else mult = -(i/2);
+      if(!seq) mult = 0;
+      else if(seq&1) mult = (seq+1)/2;
+      else mult = -(seq/2);
       break;
       // this mode divides voices between trigger 
       // note and trigger + interval
     case TONE_CONFIG::DETUNE_INTERVAL:
-      mult = (i&1);
+      mult = (seq&1);
       break;
       // this mode stacks intervals one one top of other 
       // above played note (or below for -ve detune)
     case TONE_CONFIG::DETUNE_STACK:
-      mult = i;
+      mult = seq;
       break;      
       // detune is disabled
     case TONE_CONFIG::DETUNE_NONE:
@@ -619,19 +616,20 @@ void CLogicalChannel::recalc_detune()
       mult = 0;
       break;
     }
-    m_voices[i].m_detuneFactor = mult;
+    Voice[i].m_detuneFactor = mult;
+    ++seq;
   }
 }
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::runEnvelopes() 
 {
-    for(int i=0; i<m_voiceCount; ++i) {       
-      if(runEnvelope(&m_conf->ampEnv, &m_voices[i].m_amp)) {
-        m_voices[i].reset();
-//        m_voices[i].m_midi_note = 0;
+    for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {       
+      if(runEnvelope(&m_conf->ampEnv, &Voice[i].m_amp)) {
+        Voice[i].reset();
+//        m_voices[v].m_midi_note = 0;
       }
-      runEnvelope(&m_conf->modEnv, &m_voices[i].m_mod);
+      runEnvelope(&m_conf->modEnv, &Voice[i].m_mod);
     }
 }
 
@@ -669,10 +667,10 @@ void CLogicalChannel::runLFO()
 
       if(m_conf->flags & TONE_CONFIG::UNISON) {
         if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_RATE) {
-          fLFOStep *= m_voices[0].m_mod.fValue;
+          fLFOStep *= Voice[m_voiceBegin].m_mod.fValue;
         }
         else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
-          fLFOStep *= (1.0-m_voices[0].m_mod.fValue);
+          fLFOStep *= (1.0-Voice[m_voiceBegin].m_mod.fValue);
         }
       }
 
@@ -726,10 +724,10 @@ void CLogicalChannel::runLFO()
     
     if(m_conf->flags & TONE_CONFIG::UNISON) {
       if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_DEPTH) {
-        m_fLFO *= m_voices[0].m_mod.fValue;
+        m_fLFO *= Voice[m_voiceBegin].m_mod.fValue;
       }
       else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
-        m_fLFO *= (1.0 - m_voices[0].m_mod.fValue);
+        m_fLFO *= (1.0 - Voice[m_voiceBegin].m_mod.fValue);
       }
     }
 
@@ -789,10 +787,10 @@ void CLogicalChannel::runDetune()
     
     if(m_conf->flags & TONE_CONFIG::UNISON) {
       if(m_conf->modEnvDest & TONE_CONFIG::TO_DETUNE) {
-        m_fDetuneStep *= m_voices[0].m_mod.fValue;
+        m_fDetuneStep *= Voice[m_voiceBegin].m_mod.fValue;
       } 
       else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_DETUNE) {
-        m_fDetuneStep *= (1.0-m_voices[0].m_mod.fValue);
+        m_fDetuneStep *= (1.0-Voice[m_voiceBegin].m_mod.fValue);
       }
     }
     
@@ -811,10 +809,10 @@ void CLogicalChannel::runArpeggiator()
 
       float arpPeriod = m_conf->arpPeriod;
       if(m_conf->modEnvDest & TONE_CONFIG::TO_ARP_RATE) {
-        arpPeriod *= (1.0-m_voices[0].m_mod.fValue); // NB - mod is of RATE not period
+        arpPeriod *= (1.0-Voice[m_voiceBegin].m_mod.fValue); // NB - mod is of RATE not period
       } 
       else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_ARP_RATE) {
-        arpPeriod *= m_voices[0].m_mod.fValue;
+        arpPeriod *= Voice[m_voiceBegin].m_mod.fValue;
       }
 
       if(m_conf->lfoDest & TONE_CONFIG::TO_ARP_RATE) {
