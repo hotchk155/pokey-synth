@@ -30,20 +30,19 @@ CPokeySynth::CPokeySynth()
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::initPatch(TONE_CONFIG *conf) 
 {
-  conf->ePokeyMode = CPokey::MODE_8BITHPF;
-  conf->flags = TONE_CONFIG::POKEY_HIHZ;
+  conf->ePokeyMode = CPokey::MODE_8BIT;
+  conf->flags = TONE_CONFIG::POKEY_HIHZ|TONE_CONFIG::ARPEGGIATE;
   conf->transpose = 0;
   conf->fFineTune = 0;
   conf->pitchBendRange = 12;
   conf->portaTime = 0;
   conf->detuneLevel = 0;
-  conf->eDetuneMode = TONE_CONFIG::DETUNE_NONE;
+  conf->eUnisonMode = TONE_CONFIG::UNISON_SPREAD;
   conf->hpf = 0;              // 0-127 high pass filter level
   conf->dist = 0;
   conf->eLFOMode = TONE_CONFIG::LFO_FREE;
   conf->fLFOStep = 0.0625;
   conf->eLFOWave = TONE_CONFIG::WAVE_TRI;
-  conf->arpPeriod = 10;
   conf->arpCount = 3;  
   conf->ampEnv.attackSlope = 65535;
   conf->ampEnv.releaseSlope = 65535;
@@ -54,14 +53,14 @@ void CPokeySynth::initPatch(TONE_CONFIG *conf)
   conf->modEnv2Pitch = 0;
   conf->modEnvDepth = 0;
   conf->modEnvDest = 0;
-  conf->modEnvDestNeg = 0;       
+//  conf->modEnvDestNeg = 0;       
   conf->lfo2Vol = 0;
   conf->lfo2Pitch = 0;
   conf->lfoDepth = 0;
   conf->lfoDest = 0;
-  conf->lfoDestNeg = 0;  
-  conf->modWheelDest = 0;
-  conf->modWheelDestNeg = 0;   
+//  conf->lfoDestNeg = 0;  
+  conf->modWheelDest = TONE_CONFIG::TO_ARP_RATE;
+//  conf->modWheelDestNeg = 0;   
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

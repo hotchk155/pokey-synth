@@ -16,11 +16,18 @@
 #include "LogicalVoice.h"
 #include "LogicalChannel.h"
 
+
+
 ///////////////////////////////////////////////////////////////////////
 //
 // HELPER FUNCTIONS
 //
 ///////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////
+inline byte isSingleNoteChan(TONE_CONFIG *conf) {
+  return ( (conf->flags & TONE_CONFIG::MONO) || conf->eUnisonMode != TONE_CONFIG::UNISON_OFF);
+}
 
 ///////////////////////////////////////////////////////////////////////
 inline unsigned int envSlope(char v, byte allowZeroSlope) {
@@ -181,9 +188,9 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv)
   }
 
   //////////////////////////////////////////////////////////////////
-  // CHANNEL CONFIGURED IN UNISON MODE
-  if(m_conf->flags & TONE_CONFIG::UNISON)
-  {
+  // CHANNEL CONFIGURED IN UNISON OR MONO MODE
+  if((m_conf->eUnisonMode != TONE_CONFIG::UNISON_OFF) || 
+      ( m_conf->flags & TONE_CONFIG::MONO)) {
     // check if a nonzero portamento setting is defined
     if(m_conf->portaTime) {
       
@@ -206,7 +213,7 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv)
     else  {
       m_portaTargetNote = 0;
     }
-
+    
     for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
       voice = &Voice[i];
       voice->m_midi_note = note;
@@ -214,6 +221,9 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv)
       if(trigEnv) {
         trigEnvelope(&m_conf->ampEnv, &voice->m_amp);
         trigEnvelope(&m_conf->modEnv, &voice->m_mod);
+      }
+      if(m_conf->flags & TONE_CONFIG::MONO) {
+        break;
       }
     }
   }
@@ -315,7 +325,7 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
   m_notes[m_noteCount-1].note = note;
   m_notes[m_noteCount-1].velocity = velocity;    
   int voiceCount = m_voiceEnd - m_voiceBegin;
-  if(!(m_conf->flags & TONE_CONFIG::UNISON) && (m_noteCount > voiceCount)) {    
+  if(!isSingleNoteChan(m_conf) && (m_noteCount > voiceCount)) {    
     // more notes than voices, so mute the oldest note
     int nextMute = m_noteCount-voiceCount-1;
     untrig(m_notes[nextMute].note);
@@ -331,7 +341,7 @@ void CLogicalChannel::handleNoteOff(byte note)
   untrig(note);
   if(deleteNote(note)) {
 
-    int voiceCount = (m_conf->flags & TONE_CONFIG::UNISON)? 1:(m_voiceEnd - m_voiceBegin);
+    int voiceCount = isSingleNoteChan(m_conf)? 1:(m_voiceEnd - m_voiceBegin);
     if(m_noteCount >= voiceCount) {      
       // all voices were in use.. we might be able to 
       // reactivate a note that was previously overridden
@@ -395,11 +405,14 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MIDIVEL: 
     ccFlag(&m_conf->flags, TONE_CONFIG::USE_VELOCITY, value); 
     break;
+//  case CC_UNISON: 
+//    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, value); 
+//    break;
   case CC_MONO: 
-    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, 127); 
+    ccFlag(&m_conf->flags, TONE_CONFIG::MONO, 127); 
     break;
   case CC_POLY: 
-    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, 0); 
+    ccFlag(&m_conf->flags, TONE_CONFIG::MONO, 0); 
     break;
   case CC_ARPENABLE: 
     ccFlag(&m_conf->flags, TONE_CONFIG::ARPEGGIATE, value); 
@@ -420,7 +433,7 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->fFineTune = ((float)value - 64)/10.0; 
     break;
   case CC_ARPRATE: 
-    m_conf->arpPeriod = 127-value; 
+    m_conf->arpRate = value;
     break;
   case CC_ARPCOUNT: 
     m_conf->arpCount = 1 + value/16; 
@@ -458,8 +471,8 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_DETUNELEVEL: 
     m_conf->detuneLevel = value; 
     break;
-  case CC_DETUNEMODE: 
-    m_conf->eDetuneMode = ccMapValue(value, TONE_CONFIG::DETUNE_MAX); 
+  case CC_UNISONTYPE: 
+    m_conf->eUnisonMode = ccMapValue(value, TONE_CONFIG::UNISON_MAX); 
     recalc_detune(); 
     break;    
   case CC_LFOMODE: 
@@ -480,16 +493,16 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->lfoDepth = value; 
     break;        
   case CC_LFO_2_DIST:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_DIST, value); 
+    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_DIST, value); 
     break;    
   case CC_LFO_2_HPF:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_HPF, value); 
+    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_HPF, value); 
     break;    
   case CC_LFO_2_DETUNE:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_DETUNE, value); 
+    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_DETUNE, value); 
     break;    
   case CC_LFO_2_ARP_RATE:
-    ccFlag(&m_conf->lfoDest, &m_conf->lfoDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
+    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_ARP_RATE, value); 
     break;    
 
   // MOD MATRIX SETTINGS FOR MOD ENVELOPE          
@@ -500,45 +513,45 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->modEnvDepth = value-64; 
     break;    
   case CC_ENV_2_DISTORTION:
-    ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_DIST, value); 
+    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_DIST, value); 
     break;    
   case CC_ENV_2_HPF:
-    ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_HPF, value); 
+    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_HPF, value); 
     break;    
   case CC_ENV_2_DETUNE:
-    ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_DETUNE, value); 
+    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_DETUNE, value); 
     break;    
   case CC_ENV_2_LFO_RATE:
-    ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_LFO_RATE, value); 
+    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_LFO_RATE, value); 
     break;    
   case CC_ENV_2_LFO_DEPTH:
-    ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_LFO_DEPTH, value); 
+    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_LFO_DEPTH, value); 
     break;    
   case CC_ENV_2_ARP_RATE:
-    ccFlag(&m_conf->modEnvDest, &m_conf->modEnvDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
+    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_ARP_RATE, value); 
     break;    
           
   // MOD MATRIX SETTINGS FOR MOD WHEEL
   case CC_MOD_2_VOL:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_VOL, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_VOL, value); 
     break;    
   case CC_MOD_2_DIST:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_DIST, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_DIST, value); 
     break;    
   case CC_MOD_2_HPF:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_HPF, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_HPF, value); 
     break;    
   case CC_MOD_2_DETUNE:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_DETUNE, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_DETUNE, value); 
     break;    
   case CC_MOD_2_LFO_RATE:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_LFO_RATE, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_LFO_RATE, value); 
     break;    
   case CC_MOD_2_LFO_DEPTH:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_LFO_DEPTH, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_LFO_DEPTH, value); 
     break;    
   case CC_MOD_2_ARP_RATE:
-    ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
+    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_ARP_RATE, value); 
     break;        
   case CC_ALL_SOUND_OFF:
   case CC_ALL_NOTES_OFF:
@@ -577,24 +590,24 @@ void CLogicalChannel::recalc_detune()
   
   int idx = 0;
   for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
-    switch(m_conf->eDetuneMode) {
-      case TONE_CONFIG::DETUNE_SPREAD:
+    switch(m_conf->eUnisonMode) {
+      case TONE_CONFIG::UNISON_SPREAD:
         Voice[i].m_detuneFactor = spread[idx++]; // use spread
         break;
-      case TONE_CONFIG::DETUNE_INTERVALUP:      
+      case TONE_CONFIG::UNISON_INTERVALUP:      
         Voice[i].m_detuneFactor = ((idx++)&1)? 1: 0; // alternate 0 and 1
         break;
-      case TONE_CONFIG::DETUNE_INTERVALDOWN:      
+      case TONE_CONFIG::UNISON_INTERVALDOWN:      
         Voice[i].m_detuneFactor = ((idx++)&1)? -1: 0; // alternate 0 and -1
         break;
-      case TONE_CONFIG::DETUNE_STACKUP:
+      case TONE_CONFIG::UNISON_STACKUP:
         Voice[i].m_detuneFactor = idx++; // increment 1,2,3...
         break;
-      case TONE_CONFIG::DETUNE_STACKDOWN:
+      case TONE_CONFIG::UNISON_STACKDOWN:
         Voice[i].m_detuneFactor = -(idx++); // increment -1,-2,-3...
         break;
       default:
-      case TONE_CONFIG::DETUNE_NONE:
+      case TONE_CONFIG::UNISON_OFF:
         Voice[i].m_detuneFactor = 0; // no detune
         break;
     }
@@ -640,17 +653,17 @@ void CLogicalChannel::runLFO()
       if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_RATE) {
         fLFOStep *= m_fModWheel;
       }
-      else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
-        fLFOStep *= (1.0-m_fModWheel);
-      }
+      //else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
+        //fLFOStep *= (1.0-m_fModWheel);
+//      }
 
-      if(m_conf->flags & TONE_CONFIG::UNISON) {
+      if(isSingleNoteChan(m_conf)) {
         if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_RATE) {
           fLFOStep *= Voice[m_voiceBegin].m_mod.fValue;
         }
-        else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
-          fLFOStep *= (1.0-Voice[m_voiceBegin].m_mod.fValue);
-        }
+//        else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
+//          fLFOStep *= (1.0-Voice[m_voiceBegin].m_mod.fValue);
+//        }
       }
 
       // Update the LFO counter
@@ -696,18 +709,18 @@ void CLogicalChannel::runLFO()
     if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_DEPTH) {
       m_fLFO *= m_fModWheel;
     }
-    else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
-      m_fLFO *= (1.0 - m_fModWheel);
-    }
+//    else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
+//      m_fLFO *= (1.0 - m_fModWheel);
+//    }
     
     
-    if(m_conf->flags & TONE_CONFIG::UNISON) {
+    if(isSingleNoteChan(m_conf)) {
       if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_DEPTH) {
         m_fLFO *= Voice[m_voiceBegin].m_mod.fValue;
       }
-      else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
-        m_fLFO *= (1.0 - Voice[m_voiceBegin].m_mod.fValue);
-      }
+//      else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
+//        m_fLFO *= (1.0 - Voice[m_voiceBegin].m_mod.fValue);
+//      }
     }
 
     // calculate bipolar LFO
@@ -758,21 +771,20 @@ void CLogicalChannel::runPortamento()
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::runDetune() 
 {
-    if(!(m_conf->flags & TONE_CONFIG::UNISON) || (m_conf->eDetuneMode == TONE_CONFIG::DETUNE_NONE)) {
+    if(!isSingleNoteChan(m_conf)) {
       m_fDetuneStep = 0.0;
       return;
     }
-    m_fDetuneStep = m_conf->detuneLevel/10.0;
-    
-    /*
-    if(m_conf->modEnvDest & TONE_CONFIG::TO_DETUNE) {
-      m_fDetuneStep *= m_fModWheel;
+  
+    // Mod wheel will override the detune step
+    if(m_conf->modWheelDest & TONE_CONFIG::TO_DETUNE) {
+      m_fDetuneStep = m_fModWheel * 12.0;
     } 
-    else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_DETUNE) {
-      m_fDetuneStep *= (1.0-m_fModWheel);
+    else {
+      m_fDetuneStep = m_conf->detuneLevel/10.0;
     }
 
-    
+/*    
     if(m_conf->flags & TONE_CONFIG::UNISON) {
       if(m_conf->modEnvDest & TONE_CONFIG::TO_DETUNE) {
         m_fDetuneStep *= Voice[m_voiceBegin].m_mod.fValue;
@@ -792,12 +804,21 @@ void CLogicalChannel::runDetune()
 }
 
 ///////////////////////////////////////////////////////////////////////
+// RUN THE ARPEGGIATOR STATE MACHINE
 void CLogicalChannel::runArpeggiator() 
 {
-    const byte ARPEGGIATE = TONE_CONFIG::ARPEGGIATE|TONE_CONFIG::UNISON;
-    if((m_conf->flags & ARPEGGIATE) == ARPEGGIATE && (m_noteCount > 0)) {
+    if((m_conf->flags & TONE_CONFIG::ARPEGGIATE) && isSingleNoteChan(m_conf) && (m_noteCount > 0)) {
 
-      float arpPeriod = m_conf->arpPeriod;
+      float arpRate;
+      
+      if(m_conf->modWheelDest & TONE_CONFIG::TO_ARP_RATE) {
+        arpRate = m_fModWheel; 
+      } 
+      else {
+         arpRate = m_conf->arpRate/127.0;
+      }
+      
+/*      
       if(m_conf->modEnvDest & TONE_CONFIG::TO_ARP_RATE) {
         arpPeriod *= (1.0-Voice[m_voiceBegin].m_mod.fValue); // NB - mod is of RATE not period
       } 
@@ -811,6 +832,8 @@ void CLogicalChannel::runArpeggiator()
       else if(m_conf->lfoDestNeg & TONE_CONFIG::TO_ARP_RATE) {
         arpPeriod *= m_fLFO;
       }
+*/      
+      int arpPeriod = 100/(1+arpRate) - 50;
       
       if(--m_arpCounter <= 0)
       {          
@@ -826,7 +849,7 @@ void CLogicalChannel::runArpeggiator()
         ++m_arpIndex;
         m_arpCounter = arpPeriod;
       }
-      else if(m_arpCounter > m_conf->arpPeriod) {
+      else if(m_arpCounter > arpPeriod) {
         // in case CC is being swept down from a long value
         m_arpCounter = arpPeriod;
       }
@@ -849,7 +872,6 @@ CLogicalChannel::CLogicalChannel()
   m_fromNote = 0;
   m_toNote = 127;
   m_midiChannel = 0;
-//  reset();
 }
 
 ///////////////////////////////////////////////////////////////////////  
@@ -858,6 +880,11 @@ void CLogicalChannel::assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf)
   m_voiceBegin = voiceBegin;
   m_voiceEnd = voiceEnd;
   m_conf = conf;
+}
+
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::start() {
+
   m_flags = 0;
   m_fPitchBend = 0;
   m_fModWheel = 0;  
@@ -870,11 +897,11 @@ void CLogicalChannel::assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf)
   m_fLFOCount = 0;
   m_portaTargetNote = 0;
   m_fPortaStep = 0;   
-}
-
-///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::start() {
+  
+  // ensure no sound
   quiet();
+  
+  // initialise the high divider flags for each voice
   for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
     Voice[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
   }
@@ -945,15 +972,20 @@ void CLogicalChannel::update(byte ticks)
     // cycle
     switch(ticks & 0xF) {
       // ENVELOPE - once every 16ms
-      case 0: runEnvelopes(); 
+      case 0: 
+        runEnvelopes(); 
         break;
 //      case 1: runLFO();
         break;
-      case 2: runPortamento();
+      case 2: 
+        runPortamento();
         break;
-      case 3: runDetune();
+      case 3: 
+        runDetune();
         break;
-//      case 4: runArpeggiator();
+      case 4: 
+      case 12: // arp clock runs twice per cycle
+        runArpeggiator();
         break;
     }
 }

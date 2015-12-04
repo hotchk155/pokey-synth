@@ -36,14 +36,14 @@ enum {
   CC_PORTATIME   = 5,
   
   CC_MIDIVEL    = 14,     
-  CC_UNISON     = 15,    
+//  CC_UNISON     = 15,    
   CC_TRANSPOSE  = 16,
   CC_FINETUNE   = 17,
   CC_PBRANGE    = 18,
   CC_HPF        = 20,
   CC_DIST       =21,    
 
-  CC_DETUNEMODE  = 22,
+  CC_UNISONTYPE  = 22,
   CC_DETUNELEVEL = 23,
 
   CC_MOD_2_VOL            = 24,
@@ -160,11 +160,12 @@ typedef struct {
 
   enum {
     USE_VELOCITY = 0x01,
-    UNISON       = 0x02,      
+//    UNISON       = 0x02,      
     ARPEGGIATE   = 0x04,      
     ARP2ENV      = 0x08,
     POKEY_DUAL   = 0x10,
     POKEY_HIHZ   = 0x20,
+    MONO         = 0x40
 //    POKEY_POLY9  = 0x40
   };
 
@@ -178,13 +179,13 @@ typedef struct {
   };
 
   enum {
-    DETUNE_NONE,
-    DETUNE_SPREAD,
-    DETUNE_INTERVALUP,
-    DETUNE_INTERVALDOWN,
-    DETUNE_STACKUP,
-    DETUNE_STACKDOWN,
-    DETUNE_MAX
+    UNISON_OFF,
+    UNISON_SPREAD,
+    UNISON_INTERVALUP,
+    UNISON_INTERVALDOWN,
+    UNISON_STACKUP,
+    UNISON_STACKDOWN,
+    UNISON_MAX
   };
 
   enum {
@@ -204,14 +205,14 @@ typedef struct {
   float           fFineTune;        // fine tune offset (1/10 semitones)  
   char            pitchBendRange;   // pitch bend range (semitones)
   char            portaTime;        // portamento time (16ms per increment)
+  char            eUnisonMode;      // unison mode
   char            detuneLevel;      // detune level -63 to +63 (units depend on mode)
-  char            eDetuneMode;      // detune mode
   char            hpf;              // 0-127 high pass filter level
   char            dist;             // 0-127 distortion level
   char            eLFOMode;         // LFO run mode
   float           fLFOStep;         // LFO run step (increment per 8ms of the 0.0-1.0 full range)
   char            eLFOWave;         // LFO wave form
-  char            arpPeriod;        // time between consecutive arp notes 
+  char            arpRate;          // arp rate from 0 (slowest) to 127 (fastest)
   char            arpCount;         // max notes to include in arpeggio
   
   ENVELOPE        ampEnv;           // amplitude envelope configuration
@@ -220,16 +221,16 @@ typedef struct {
   char            modEnv2Pitch;     
   char            modEnvDepth;      
   byte            modEnvDest;
-  byte            modEnvDestNeg;    
+//  byte            modEnvDestNeg;    
   
   char            lfo2Vol;
   char            lfo2Pitch;
   char            lfoDepth;
   byte            lfoDest;
-  byte            lfoDestNeg;
+//  byte            lfoDestNeg;
   
   byte            modWheelDest;
-  byte            modWheelDestNeg;
+//  byte            modWheelDestNeg;
 } TONE_CONFIG;
 
 extern TONE_CONFIG Patch[MAX_CHANNEL];

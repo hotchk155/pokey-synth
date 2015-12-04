@@ -108,8 +108,16 @@ void CLogicalVoice::update()
   // VOLUME CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
 
+  // mod wheel
+  if(conf->modWheelDest & TONE_CONFIG::TO_VOL) {
+    value = channel->m_fModWheel;
+  }
+  else {
+    value = m_midi_vel/127.0;
+  }
+
   // apply volume envelope
-  value = m_midi_vel/127.0 * m_amp.fValue;
+  value *= m_amp.fValue;
 
   // apply LFO modulation  
 //  if(conf->lfoDest & TONE_CONFIG::TO_VOL) {
@@ -129,14 +137,21 @@ void CLogicalVoice::update()
   
   // apply to POKEY channel
   pokey->vol(m_voice, value);
-  //pokey->vol(m_voice, 1.0);
   
   ////////////////////////////////////////////////////////////////////////////////
   // DISTORTION
   ////////////////////////////////////////////////////////////////////////////////
   
-  // get initial value
-  value = conf->dist/127.0;
+  // mod wheel
+  if(conf->modWheelDest & TONE_CONFIG::TO_DIST) {
+    value = channel->m_fModWheel;
+  }
+  else {
+    value = conf->dist/127.0;
+  }
+  //else if(conf->modWheelDestNeg & TONE_CONFIG::TO_DIST) {
+  //  value *= (1.0-channel->m_fModWheel);
+  //}
 
 /*
   // envelope modulation  
@@ -154,16 +169,8 @@ void CLogicalVoice::update()
   else if(conf->lfoDestNeg & TONE_CONFIG::TO_DIST) {
     value *= (1.0 - channel->m_fLFO);
   }
-
-  // mod wheel
-  if(conf->modWheelDest & TONE_CONFIG::TO_DIST) {
-    value *= channel->m_fModWheel;
-  }
-  else if(conf->modWheelDestNeg & TONE_CONFIG::TO_DIST) {
-    value *= (1.0-channel->m_fModWheel);
-  }
   */
-  
+    
   // apply final distortion value to channel
   pokey->dist(m_voice, value);
   
@@ -171,9 +178,13 @@ void CLogicalVoice::update()
   // HIGH PASS FILTER FREQ CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
 
-
-  // get initial value
-  value = conf->hpf/127.0;
+  if(conf->modWheelDest & TONE_CONFIG::TO_HPF) {
+    value = channel->m_fModWheel;
+  }
+  else {
+    value = conf->hpf/127.0;
+  }
+  
 /*
   // apply envelope modulation
   if(conf->modEnvDest & TONE_CONFIG::TO_HPF) {
