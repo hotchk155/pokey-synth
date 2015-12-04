@@ -12,7 +12,8 @@ class CPokeySynth
 public:  
   
   enum {
-    DUAL_POKEYS = 0x01   // there are two POKEYs installed
+    DUAL_POKEYS = 0x01,   // there are two POKEYs installed
+    MIDI_OMNI = 0x02
   };
   byte m_flags;
  
@@ -47,7 +48,7 @@ public:
   void init();
   void run();
   void quiet();
-  void reset();  
+//  void reset();  
   void initIO();
   
 };

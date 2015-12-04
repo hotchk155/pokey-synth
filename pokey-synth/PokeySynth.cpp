@@ -30,11 +30,11 @@ CPokeySynth::CPokeySynth()
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::initPatch(TONE_CONFIG *conf) 
 {
-  conf->ePokeyMode = CPokey::MODE_8BIT;
-  conf->flags = TONE_CONFIG::POKEY_HIHZ|TONE_CONFIG::UNISON;
+  conf->ePokeyMode = CPokey::MODE_8BITHPF;
+  conf->flags = TONE_CONFIG::POKEY_HIHZ;
   conf->transpose = 0;
   conf->fFineTune = 0;
-  conf->pitchBendRange = 5;
+  conf->pitchBendRange = 12;
   conf->portaTime = 0;
   conf->detuneLevel = 0;
   conf->eDetuneMode = TONE_CONFIG::DETUNE_NONE;
@@ -71,7 +71,7 @@ void CPokeySynth::configure()
   int i;
 
   // reset synth state
-  reset();
+  //reset();
 
   //TODO multi pokey
   
@@ -89,23 +89,23 @@ void CPokeySynth::configure()
   }   
   
   // Assign voices to a channel
-  Channel[0].assign(0, 1, &Patch[0]);  
-//  Channel[0].assign(0, m_voiceCount, &Patch[0]);  
+//  Channel[0].assign(0, 1, &Patch[0]);  
+  Channel[0].assign(0, m_voiceCount, &Patch[0]);  
   Channel[0].start();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 // RESET ALL SYNTH STATE
-void CPokeySynth::reset() 
-{
-  int i;
-  for(i=0; i<MAX_VOICE; ++i) {
-    Voice[i].reset();
-  }    
-  for(i=0; i<MAX_CHANNEL; ++i) {
-    Channel[i].reset();
-  }  
-}
+//void CPokeySynth::reset() 
+//{
+//  int i;
+//  for(i=0; i<MAX_VOICE; ++i) {
+//    Voice[i].reset();
+//  }    
+//  for(i=0; i<MAX_CHANNEL; ++i) {
+//    Channel[i].reset();
+//  }  
+//}
 
 ///////////////////////////////////////////////////////////////////////////////////
 // SILENCE ALL SYNTH OUTPUT
@@ -227,13 +227,22 @@ void CPokeySynth::run()
   if(midi)
   {
     switch(midi & 0xF0) {
+        case 0xB0: //  Continuous controller  2  controller #  controller value  
+          if(m_midiInput.m_params[0] == CC_OMNI_ON) {
+            m_flags |= MIDI_OMNI;
+            break;
+          }
+          else if(m_midiInput.m_params[0] == CC_OMNI_OFF) {
+            m_flags &= ~MIDI_OMNI;
+            break;
+          }
+          // fall-thru          
         case 0x80: //  Note-off  2  key  velocity  
         case 0x90: //  Note-on  2  key  veolcity  
-        case 0xB0: //  Continuous controller  2  controller #  controller value  
         case 0xE0: //  Pitch bend  2  lsb (7 bits)  msb (7 bit      
           // dispatch MIDI message to channels
           for(i = 0; i<m_channelCount; ++i) {            
-            if((midi & 0x0F)==Channel[i].m_midiChannel) {                
+            if((midi & 0x0F)==Channel[i].m_midiChannel || (m_flags & MIDI_OMNI)) {                
               Channel[i].handle(midi, m_midiInput.m_params);
             }
           }        

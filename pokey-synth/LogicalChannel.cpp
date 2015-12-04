@@ -294,6 +294,10 @@ byte CLogicalChannel::deleteNote(byte note) {
 // HANDLE NOTE ON MESSAGE
 void CLogicalChannel::handleNoteOn(byte note, byte velocity)
 {  
+  // Ensure the note is in our valid range
+  if(note < m_fromNote || note > m_toNote) 
+    return;
+    
   // ensure the note is not already in the list (if
   // it is, it will be moved to top of list)
   deleteNote(note);
@@ -340,9 +344,8 @@ void CLogicalChannel::handleNoteOff(byte note)
 // HANDLE PITCH BEND MESSAGE
 void CLogicalChannel::handlePitchBend(byte lo, byte hi)
 {
-  m_fPitchBend = ((((int)hi)<<7 | lo) - 8192);
+  m_fPitchBend = (float)((((int)hi)<<7 | lo) - 0x2000) / 0x2000;
   m_fPitchBend *= m_conf->pitchBendRange;
-  m_fPitchBend /= 16384;
 }  
 
 ///////////////////////////////////////////////////////////////////////
@@ -392,8 +395,11 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MIDIVEL: 
     ccFlag(&m_conf->flags, TONE_CONFIG::USE_VELOCITY, value); 
     break;
-  case CC_UNISON: 
-    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, value); 
+  case CC_MONO: 
+    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, 127); 
+    break;
+  case CC_POLY: 
+    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, 0); 
     break;
   case CC_ARPENABLE: 
     ccFlag(&m_conf->flags, TONE_CONFIG::ARPEGGIATE, value); 
@@ -444,13 +450,13 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->pitchBendRange = 12.0 * (value/127.0); 
     break;
   case CC_HPF: 
-    m_conf->hpf = 127-value;
+    m_conf->hpf = value;
     break;
   case CC_DIST: 
     m_conf->dist = value; 
     break;    
   case CC_DETUNELEVEL: 
-    m_conf->detuneLevel = value - 64; 
+    m_conf->detuneLevel = value; 
     break;
   case CC_DETUNEMODE: 
     m_conf->eDetuneMode = ccMapValue(value, TONE_CONFIG::DETUNE_MAX); 
@@ -534,47 +540,64 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MOD_2_ARP_RATE:
     ccFlag(&m_conf->modWheelDest, &m_conf->modWheelDestNeg, TONE_CONFIG::TO_ARP_RATE, value); 
     break;        
+  case CC_ALL_SOUND_OFF:
+  case CC_ALL_NOTES_OFF:
+    quiet();
+    break;
+  case CC_RESET_CTRL:
+    //TODO
+    break;
+  case CC_FROM_NOTE:
+    m_fromNote = value;
+    if(m_toNote < m_fromNote) {
+      m_fromNote = m_toNote;
+      m_toNote = value;
+    }
+    break;
+  case CC_TO_NOTE:    
+    m_toNote = value;
+    if(m_toNote < m_fromNote) {
+      m_toNote = m_fromNote;
+      m_fromNote = value;
+    }
+    break;
   }
 }
 
 ///////////////////////////////////////////////////////////////////////
-// recalculate voice detune
+// RECALCULATE VOICE DETUNE FACTORS
+// To "spread" the detuning of unison voices, each voice in the channel
+// has a detune factor that the detune amount is multiplied by. This 
+// method calculates the detune factors for each voice based on the 
+// detune mode
 void CLogicalChannel::recalc_detune()
 {
-  // calculate the detune for each voice
-  int seq = 0;
-  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) 
-  {
-    int mult = 0;
-    switch(m_conf->eDetuneMode)
-    {
-      // these modes spread out in both directions 
-      // from central note, with first voice playing
-      // unadjusted note
-    case TONE_CONFIG::DETUNE_FINE:
-    case TONE_CONFIG::DETUNE_SPREAD:
-      if(!seq) mult = 0;
-      else if(seq&1) mult = (seq+1)/2;
-      else mult = -(seq/2);
-      break;
-      // this mode divides voices between trigger 
-      // note and trigger + interval
-    case TONE_CONFIG::DETUNE_INTERVAL:
-      mult = (seq&1);
-      break;
-      // this mode stacks intervals one one top of other 
-      // above played note (or below for -ve detune)
-    case TONE_CONFIG::DETUNE_STACK:
-      mult = seq;
-      break;      
-      // detune is disabled
-    case TONE_CONFIG::DETUNE_NONE:
-    default:
-      mult = 0;
-      break;
+  // lookup table of factors for "spread" mode
+  const char spread[] = {0, -1, +1, -2, +2, -3, +3, -4};
+  
+  int idx = 0;
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    switch(m_conf->eDetuneMode) {
+      case TONE_CONFIG::DETUNE_SPREAD:
+        Voice[i].m_detuneFactor = spread[idx++]; // use spread
+        break;
+      case TONE_CONFIG::DETUNE_INTERVALUP:      
+        Voice[i].m_detuneFactor = ((idx++)&1)? 1: 0; // alternate 0 and 1
+        break;
+      case TONE_CONFIG::DETUNE_INTERVALDOWN:      
+        Voice[i].m_detuneFactor = ((idx++)&1)? -1: 0; // alternate 0 and -1
+        break;
+      case TONE_CONFIG::DETUNE_STACKUP:
+        Voice[i].m_detuneFactor = idx++; // increment 1,2,3...
+        break;
+      case TONE_CONFIG::DETUNE_STACKDOWN:
+        Voice[i].m_detuneFactor = -(idx++); // increment -1,-2,-3...
+        break;
+      default:
+      case TONE_CONFIG::DETUNE_NONE:
+        Voice[i].m_detuneFactor = 0; // no detune
+        break;
     }
-    Voice[i].m_detuneFactor = mult;
-    ++seq;
   }
 }
 
@@ -583,7 +606,7 @@ void CLogicalChannel::runEnvelopes()
 {
     for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {       
       if(runEnvelope(&m_conf->ampEnv, &Voice[i].m_amp)) {
-        Voice[i].reset();
+        Voice[i].quiet();
       }
       runEnvelope(&m_conf->modEnv, &Voice[i].m_mod);
     }
@@ -735,21 +758,13 @@ void CLogicalChannel::runPortamento()
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::runDetune() 
 {
-    switch(m_conf->eDetuneMode) {
-    case TONE_CONFIG::DETUNE_FINE:  // 10 cents
-      m_fDetuneStep = m_conf->detuneLevel/10.0;
-      break;
-    case TONE_CONFIG::DETUNE_INTERVAL:  // semitone
-    case TONE_CONFIG::DETUNE_SPREAD:
-    case TONE_CONFIG::DETUNE_STACK:
-      m_fDetuneStep = m_conf->detuneLevel;
-      break;
-    case TONE_CONFIG::DETUNE_NONE:
-    default:
+    if(!(m_conf->flags & TONE_CONFIG::UNISON) || (m_conf->eDetuneMode == TONE_CONFIG::DETUNE_NONE)) {
       m_fDetuneStep = 0.0;
-      break;
+      return;
     }
+    m_fDetuneStep = m_conf->detuneLevel/10.0;
     
+    /*
     if(m_conf->modEnvDest & TONE_CONFIG::TO_DETUNE) {
       m_fDetuneStep *= m_fModWheel;
     } 
@@ -773,6 +788,7 @@ void CLogicalChannel::runDetune()
     else if(m_conf->lfoDestNeg & TONE_CONFIG::TO_DETUNE) {
       m_fDetuneStep *= (1.0-m_fLFO);
     }
+    */
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -830,8 +846,10 @@ CLogicalChannel::CLogicalChannel()
   m_conf = NULL;
   m_voiceBegin = 0;
   m_voiceEnd = 0;
+  m_fromNote = 0;
+  m_toNote = 127;
   m_midiChannel = 0;
-  reset();
+//  reset();
 }
 
 ///////////////////////////////////////////////////////////////////////  
@@ -840,17 +858,6 @@ void CLogicalChannel::assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf)
   m_voiceBegin = voiceBegin;
   m_voiceEnd = voiceEnd;
   m_conf = conf;
-}
-
-///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::start() {
-  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
-    Voice[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
-  }
-}
-
-///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::reset() {
   m_flags = 0;
   m_fPitchBend = 0;
   m_fModWheel = 0;  
@@ -862,14 +869,29 @@ void CLogicalChannel::reset() {
   m_arpIndex = 0;
   m_fLFOCount = 0;
   m_portaTargetNote = 0;
-  m_fPortaStep = 0; 
+  m_fPortaStep = 0;   
+}
+
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::start() {
   quiet();
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
+  }
+  
+  // initial calculation of detune spread
+  recalc_detune();
 }
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::quiet() {
   // clear the note stack
   m_noteCount = 0;
+  
+  // silence the voices
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].quiet();
+  }   
 }
 
 
@@ -929,7 +951,7 @@ void CLogicalChannel::update(byte ticks)
         break;
       case 2: runPortamento();
         break;
-//      case 3: runDetune();
+      case 3: runDetune();
         break;
 //      case 4: runArpeggiator();
         break;

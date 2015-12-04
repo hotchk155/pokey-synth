@@ -92,6 +92,18 @@ enum {
   CC_POKEYDUAL  = 94,
   CC_POKEYRANGE   = 95,
 //  CC_POKEYPOLY9   = 95,
+
+  CC_RESET_CTRL = 121,
+  CC_OMNI_ON = 125,
+  CC_OMNI_OFF = 124,
+
+  CC_MONO = 126,
+  CC_POLY = 127,
+  CC_ALL_SOUND_OFF = 120,
+  CC_ALL_NOTES_OFF = 123,
+  
+  CC_FROM_NOTE = 75,
+  CC_TO_NOTE = 76
 };
 
 
@@ -167,10 +179,11 @@ typedef struct {
 
   enum {
     DETUNE_NONE,
-    DETUNE_FINE,
-    DETUNE_INTERVAL,
     DETUNE_SPREAD,
-    DETUNE_STACK,
+    DETUNE_INTERVALUP,
+    DETUNE_INTERVALDOWN,
+    DETUNE_STACKUP,
+    DETUNE_STACKDOWN,
     DETUNE_MAX
   };
 
@@ -188,7 +201,7 @@ typedef struct {
   byte            ePokeyMode;       // pokey mode
   byte            flags;            // bit flags
   char            transpose;        // semitone offset -63 to +63 (semitones)
-  float           fFineTune;         // fine tune offset (semitones)  
+  float           fFineTune;        // fine tune offset (1/10 semitones)  
   char            pitchBendRange;   // pitch bend range (semitones)
   char            portaTime;        // portamento time (16ms per increment)
   char            detuneLevel;      // detune level -63 to +63 (units depend on mode)
@@ -200,12 +213,12 @@ typedef struct {
   char            eLFOWave;         // LFO wave form
   char            arpPeriod;        // time between consecutive arp notes 
   char            arpCount;         // max notes to include in arpeggio
-  ENVELOPE        ampEnv;
-  ENVELOPE        modEnv;
   
+  ENVELOPE        ampEnv;           // amplitude envelope configuration
+  ENVELOPE        modEnv;           // modulation envelope configuration
   
-  char            modEnv2Pitch;
-  char            modEnvDepth;
+  char            modEnv2Pitch;     
+  char            modEnvDepth;      
   byte            modEnvDest;
   byte            modEnvDestNeg;    
   

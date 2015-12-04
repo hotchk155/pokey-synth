@@ -76,6 +76,10 @@ public:
   // MIDI channel 0..15
   byte m_midiChannel;
   
+  // Active note range in the channel
+  char m_fromNote;
+  char m_toNote;
+  
   // Pointer to "patch" info
   TONE_CONFIG *m_conf;
 
@@ -99,12 +103,11 @@ public:
   CLogicalChannel();  
   void assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf);
   void handle(byte status, byte *params);
-  void reset();
-  void quiet();
   void div8_high(byte v);
   void dist_poly9(byte v);
   void update(byte ticks);
   void start();  
+  void quiet();
 };
 
 // Declare the global channel instances

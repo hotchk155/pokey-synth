@@ -18,7 +18,7 @@ CLogicalVoice::CLogicalVoice()
 {
   m_channel = 0;
   m_voice = 0;
-  reset();
+  m_detuneFactor = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -30,23 +30,18 @@ void CLogicalVoice::assign(byte channel, byte voice)
 }
 
 ///////////////////////////////////////////////////////////////////////
-// RESET THE VOICE STATE
-void CLogicalVoice::reset()
-{
-  m_midi_note = 0;
-  m_midi_vel = 0;
-  m_amp.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
-  m_amp.fValue = m_mod.fValue = 0.0;
-  m_mod.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
-  m_mod.fValue = m_mod.fValue = 0.0;
-}
-
-///////////////////////////////////////////////////////////////////////
 // SILENCE THE VOICE
 void CLogicalVoice::quiet()
 {
   CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
   pokey->vol(m_voice, 0);
+  
+  m_midi_note = 0;
+  m_midi_vel = 0;
+  m_amp.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
+  m_amp.fValue = m_mod.fValue = 0.0;
+  m_mod.ePhase = m_mod.ePhase = ENVELOPE_STATE::NONE;
+  m_mod.fValue = m_mod.fValue = 0.0;  
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -80,16 +75,18 @@ void CLogicalVoice::update()
   // PITCH CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
   
-  // get initial value
+  // check if portamento is in progress
   if(channel->m_portaTargetNote) {
+    // yes - use the portmento note
     value = channel->m_fPortamentoNote;
   }
   else {
+    // no - use the midi note
     value = m_midi_note;
   }
   
   // add transpose, detune, pitch bend
-  //value = value + (m_detuneFactor * channel->m_fDetuneStep) + channel->m_fPitchBend + conf->transpose + conf->fFineTune;
+  value = value + (m_detuneFactor * channel->m_fDetuneStep) + channel->m_fPitchBend + conf->transpose + conf->fFineTune;
   
   // add envelope modulation
 //  if(conf->modEnv2Pitch) {
@@ -106,8 +103,6 @@ void CLogicalVoice::update()
   
   // apply to POKEY channel
   pokey->pitch(m_voice, value);
-  //pokey->pitch(m_voice, 220);
-
 
   ////////////////////////////////////////////////////////////////////////////////
   // VOLUME CALCULATION
@@ -136,7 +131,6 @@ void CLogicalVoice::update()
   pokey->vol(m_voice, value);
   //pokey->vol(m_voice, 1.0);
   
-  /*
   ////////////////////////////////////////////////////////////////////////////////
   // DISTORTION
   ////////////////////////////////////////////////////////////////////////////////
@@ -144,6 +138,7 @@ void CLogicalVoice::update()
   // get initial value
   value = conf->dist/127.0;
 
+/*
   // envelope modulation  
   if(conf->modEnvDest & TONE_CONFIG::TO_DIST) {
     value = value * m_mod.fValue;
@@ -167,18 +162,19 @@ void CLogicalVoice::update()
   else if(conf->modWheelDestNeg & TONE_CONFIG::TO_DIST) {
     value *= (1.0-channel->m_fModWheel);
   }
+  */
   
   // apply final distortion value to channel
   pokey->dist(m_voice, value);
-*/
+  
   ////////////////////////////////////////////////////////////////////////////////
   // HIGH PASS FILTER FREQ CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
 
-/*
+
   // get initial value
   value = conf->hpf/127.0;
-
+/*
   // apply envelope modulation
   if(conf->modEnvDest & TONE_CONFIG::TO_HPF) {
     value = value * m_mod.fValue;
@@ -202,8 +198,8 @@ void CLogicalVoice::update()
   else if(conf->modWheelDestNeg & TONE_CONFIG::TO_HPF) {
     value *= (1.0-channel->m_fModWheel);
   }
-  
+*/  
   // apply HPF to the channel
   pokey->hpf(m_voice, value);
-*/  
+  
 }
