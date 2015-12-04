@@ -23,16 +23,15 @@ CPokeySynth::CPokeySynth()
   m_voiceCount = 0;
   
   m_lastTick = 0;
-//  m_ticks = 0;
   m_voiceToUpdate = 0;  
   m_channelCount = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf) 
+void CPokeySynth::initPatch(TONE_CONFIG *conf) 
 {
   conf->ePokeyMode = CPokey::MODE_8BIT;
-  conf->flags = TONE_CONFIG::POKEY_HIHZ;
+  conf->flags = TONE_CONFIG::POKEY_HIHZ|TONE_CONFIG::UNISON;
   conf->transpose = 0;
   conf->fFineTune = 0;
   conf->pitchBendRange = 5;
@@ -46,11 +45,11 @@ void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf)
   conf->eLFOWave = TONE_CONFIG::WAVE_TRI;
   conf->arpPeriod = 10;
   conf->arpCount = 3;  
-  conf->ampEnv.fAttackStep = 1.0;
-  conf->ampEnv.fReleaseStep = 1.0;
+  conf->ampEnv.attackSlope = 65535;
+  conf->ampEnv.releaseSlope = 65535;
   conf->ampEnv.mode = ENVELOPE::ATT_REL;
-  conf->modEnv.fAttackStep = 1.0;
-  conf->modEnv.fReleaseStep = 1.0;
+  conf->modEnv.attackSlope = 127;
+  conf->modEnv.releaseSlope = 127;
   conf->modEnv.mode = ENVELOPE::ATT_REL;  
   conf->modEnv2Pitch = 0;
   conf->modEnvDepth = 0;
@@ -62,8 +61,7 @@ void CPokeySynth::defaultToneConfig(TONE_CONFIG *conf)
   conf->lfoDest = 0;
   conf->lfoDestNeg = 0;  
   conf->modWheelDest = 0;
-  conf->modWheelDestNeg = 0;  
-  
+  conf->modWheelDestNeg = 0;   
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -80,17 +78,19 @@ void CPokeySynth::configure()
   // one channel (for now)
   m_channelCount = 1;
   
-  //m_pokey[0].which(0);
-//  m_pokey[1].which(1);
-
   // configure the POKEY chip based on current patch
   byte voice[8] = {0};  
-  m_voiceCount = Pokey1.configure(m_conf[0].ePokeyMode, voice);
-  
+  m_voiceCount = Pokey1.configure(Patch[0].ePokeyMode, voice);
+  //TEST_CONDITION(m_voiceCount==4, 3);  
+    
   // assign physical POKEY voices to logical voices
   for(int i=0; i<m_voiceCount; ++i) {
       Voice[i].assign(0, voice[i]);      
   }   
+  
+  // Assign voices to a channel
+  Channel[0].assign(0, 1, &Patch[0]);  
+//  Channel[0].assign(0, m_voiceCount, &Patch[0]);  
   Channel[0].start();
 }
 
@@ -175,7 +175,7 @@ void CPokeySynth::init()
     m_numPOKEYs = m_storage.getNumPokeys();    
   }
 */  
-  defaultToneConfig(&m_conf[0]);//TODO REMOVE
+  initPatch(&Patch[0]);//TODO REMOVE
   
   configure();
   delay(100);
@@ -209,7 +209,7 @@ void CPokeySynth::run()
     m_lastTick = (byte)ms;
     
     // update the channels (run LFO, envelope etc)
-    for(int i=0; i<m_channelCount; ++i) {
+    for(i=0; i<m_channelCount; ++i) {
       Channel[i].update((byte)ms);
     }    
   }
@@ -233,9 +233,7 @@ void CPokeySynth::run()
         case 0xE0: //  Pitch bend  2  lsb (7 bits)  msb (7 bit      
           // dispatch MIDI message to channels
           for(i = 0; i<m_channelCount; ++i) {            
-            if((midi & 0x0F) == Channel[i].m_midiChannel) {                
-//digitalWrite(P_LED2, HIGH);
-              
+            if((midi & 0x0F)==Channel[i].m_midiChannel) {                
               Channel[i].handle(midi, m_midiInput.m_params);
             }
           }        
@@ -243,6 +241,3 @@ void CPokeySynth::run()
     }
   }
 }
-
-
-

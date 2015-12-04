@@ -89,23 +89,24 @@ void CLogicalVoice::update()
   }
   
   // add transpose, detune, pitch bend
-  value = value + (m_detuneFactor * channel->m_fDetuneStep) + channel->m_fPitchBend + conf->transpose + conf->fFineTune;
+  //value = value + (m_detuneFactor * channel->m_fDetuneStep) + channel->m_fPitchBend + conf->transpose + conf->fFineTune;
   
   // add envelope modulation
-  if(conf->modEnv2Pitch) {
-    value = value + m_mod.fValue * conf->modEnv2Pitch/(63.0/12.0);
-  }
+//  if(conf->modEnv2Pitch) {
+//    value = value + m_mod.fValue * conf->modEnv2Pitch/(63.0/12.0);
+//  }
   
   // add LFO modulation
-  if(conf->lfo2Pitch) {
-    value = value + channel->m_fLFO * conf->lfo2Pitch/(63.0/12.0);
-  }  
+//  if(conf->lfo2Pitch) {
+//    value = value + channel->m_fLFO * conf->lfo2Pitch/(63.0/12.0);
+//  }  
   
   // calculate hz value
   value = 440.0 * pow(2.0,((value-57.0)/12.0));
   
   // apply to POKEY channel
   pokey->pitch(m_voice, value);
+  //pokey->pitch(m_voice, 220);
 
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -116,24 +117,26 @@ void CLogicalVoice::update()
   value = m_midi_vel/127.0 * m_amp.fValue;
 
   // apply LFO modulation  
-  if(conf->lfoDest & TONE_CONFIG::TO_VOL) {
-    value *= channel->m_fLFO;
-  }
-  else if(conf->lfoDestNeg & TONE_CONFIG::TO_VOL) {
-    value *= (1.0-channel->m_fLFO);
-  }
+//  if(conf->lfoDest & TONE_CONFIG::TO_VOL) {
+//    value *= channel->m_fLFO;
+//  }
+//  else if(conf->lfoDestNeg & TONE_CONFIG::TO_VOL) {
+//    value *= (1.0-channel->m_fLFO);
+//  }
 
   // apply mod wheel modulation
-  if(conf->modWheelDest & TONE_CONFIG::TO_VOL) {
-    value *= channel->m_fModWheel;
-  }
-  else if(conf->modWheelDestNeg & TONE_CONFIG::TO_VOL) {
-    value *= (1.0-channel->m_fModWheel);
-  }
+//  if(conf->modWheelDest & TONE_CONFIG::TO_VOL) {
+//    value *= channel->m_fModWheel;
+//  }
+//  else if(conf->modWheelDestNeg & TONE_CONFIG::TO_VOL) {
+//    value *= (1.0-channel->m_fModWheel);
+//  }
   
   // apply to POKEY channel
   pokey->vol(m_voice, value);
+  //pokey->vol(m_voice, 1.0);
   
+  /*
   ////////////////////////////////////////////////////////////////////////////////
   // DISTORTION
   ////////////////////////////////////////////////////////////////////////////////
@@ -167,11 +170,12 @@ void CLogicalVoice::update()
   
   // apply final distortion value to channel
   pokey->dist(m_voice, value);
-
+*/
   ////////////////////////////////////////////////////////////////////////////////
   // HIGH PASS FILTER FREQ CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
 
+/*
   // get initial value
   value = conf->hpf/127.0;
 
@@ -201,4 +205,5 @@ void CLogicalVoice::update()
   
   // apply HPF to the channel
   pokey->hpf(m_voice, value);
+*/  
 }

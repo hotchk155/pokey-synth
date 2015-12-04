@@ -7,7 +7,7 @@
 class CPokeySynth
 {
    
-  void defaultToneConfig(TONE_CONFIG *conf);
+  void initPatch(TONE_CONFIG *conf);  
   void configure();
 public:  
   
@@ -29,7 +29,7 @@ public:
 //  CPokey m_pokey[MAX_POKEY];
 
   // The loaded "patches"
-  TONE_CONFIG m_conf[MAX_CHANNEL];
+//  TONE_CONFIG m_conf[MAX_CHANNEL];
 
   // number of POKEY devices actually installed  
 //  byte m_numPOKEYs;

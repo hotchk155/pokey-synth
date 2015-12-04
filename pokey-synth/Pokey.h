@@ -27,6 +27,7 @@ public:
   int configure(int mode, byte *voices);
   void pitch(byte voice, float hz);
   void vol(byte voice, float v);
+  void quiet(byte voice);
   void dist(byte voice, float v);
   void hpf(byte voice, float v);
   void div8_high(byte voice, byte v);

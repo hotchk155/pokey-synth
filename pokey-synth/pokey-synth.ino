@@ -37,20 +37,20 @@ CPokey Pokey2(1);
 CLogicalChannel Channel[MAX_CHANNEL];
 CLogicalVoice Voice[MAX_VOICE];
 CPokeySynth PokeySynth;
+TONE_CONFIG Patch[MAX_CHANNEL];
 
 ///////////////////////////////////////////////////////////////////////////////////
 void setup()
 {  
   PokeySynth.initIO();
-  pokeyTest1();
-  //PokeySynth.init();
+  PokeySynth.init();
   //PokeySynth.test();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 void loop() 
 {
-//  PokeySynth.run();
+  PokeySynth.run();
 }
 
 

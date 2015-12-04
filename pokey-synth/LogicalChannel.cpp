@@ -2,6 +2,7 @@
 // POKEYPIG
 // hotchk155/2015
 ///////////////////////////////////////////////////////////
+//  indicateTest(1);
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -15,26 +16,52 @@
 #include "LogicalVoice.h"
 #include "LogicalChannel.h"
 
-
+///////////////////////////////////////////////////////////////////////
+//
+// HELPER FUNCTIONS
+//
+///////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////
-inline float envStep(char v) {
-  if(!v) return 1.0;
-  return 0.5/((float)v+1);
+inline unsigned int envSlope(char v, byte allowZeroSlope) {
+  if(v == 127 && allowZeroSlope) return 0;  
+  return 65535/(v+1);
 }
 
 ///////////////////////////////////////////////////////////////////////
 inline void trigEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
   envState->ePhase = ENVELOPE_STATE::ATTACK;    
-  envState->fValue = 0;
+  if(env->attackSlope == 65535) {
+    envState->fValue = 1.0; // no attack - full volume immediately!
+  }
+  else {
+    envState->fValue = 0.0; // start of attack
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////
 inline void untrigEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
-  switch(envState->ePhase) {
-    case ENVELOPE_STATE::ATTACK:
-    case ENVELOPE_STATE::SUSTAIN:
-      envState->ePhase = ENVELOPE_STATE::RELEASE;
+  switch(env->mode) {            
+    case ENVELOPE::ATT_DEC:
+    case ENVELOPE::ATT_REL:
+    case ENVELOPE::ATT_RPT_REL:
+      switch(envState->ePhase) {
+        case ENVELOPE_STATE::ATTACK:
+        case ENVELOPE_STATE::SUSTAIN:
+          envState->ePhase = ENVELOPE_STATE::RELEASE;
+          if(env->releaseSlope == 65535) {
+            envState->fValue = 0.0; // no release - kill volume immediately
+          }
+          break;
+      }  
+      break;        
+    case ENVELOPE::ATT_DEC_RPT:
+      // kill it dead
+      envState->fValue = 0.0;
+      envState->ePhase = ENVELOPE_STATE::NONE;
+      break;
+    case ENVELOPE::LOOP:
+      // keeps right on going!
       break;
   }  
 }
@@ -42,21 +69,23 @@ inline void untrigEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
 ///////////////////////////////////////////////////////////////////////
 // result is 1 if envelope has finished
 inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {  
+  
   switch(envState->ePhase) {               
     case ENVELOPE_STATE::ATTACK:
-        envState->fValue += env->fAttackStep;
+        envState->fValue += env->attackSlope/65535.0;
         if(envState->fValue >= 1.0) {
           envState->fValue = 1.0;
           // reached end of attack phase... what happens next depends on mode
           switch(env->mode) {            
             case ENVELOPE::ATT_DEC:
-            case ENVELOPE::ATT_DEC_RPT_REL:
+            case ENVELOPE::ATT_DEC_RPT:
             case ENVELOPE::LOOP:
               envState->ePhase = ENVELOPE_STATE::RELEASE;
               break;
             case ENVELOPE::ATT_RPT_REL:
               envState->fValue = 0.0;
               envState->ePhase = ENVELOPE_STATE::ATTACK;
+              break;
             case ENVELOPE::ATT_REL:
             default:
               envState->ePhase = ENVELOPE_STATE::SUSTAIN;
@@ -65,18 +94,18 @@ inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
         }
         break;
     case ENVELOPE_STATE::RELEASE:
-        envState->fValue -= env->fReleaseStep;
+        envState->fValue -= env->releaseSlope/65535.0;
         if(envState->fValue <= 0.0) {
           envState->fValue = 0.0;
           // reached end of release phase... what happens next depends on mode
           switch(env->mode) {                        
             case ENVELOPE::LOOP:
+            case ENVELOPE::ATT_DEC_RPT:
               envState->ePhase = ENVELOPE_STATE::ATTACK;
               break;
             case ENVELOPE::ATT_RPT_REL:
             case ENVELOPE::ATT_DEC:
             case ENVELOPE::ATT_REL:
-            case ENVELOPE::ATT_DEC_RPT_REL:
             default:
               envState->ePhase = ENVELOPE_STATE::NONE;
               return 1;
@@ -88,57 +117,10 @@ inline byte runEnvelope(ENVELOPE *env, ENVELOPE_STATE *envState) {
 }
 
 ///////////////////////////////////////////////////////////////////////
-// Constructor
-CLogicalChannel::CLogicalChannel() 
-{
-  m_conf = NULL;
-  m_voiceBegin = 0;
-  m_voiceEnd = 0;
-  m_midiChannel = 0;
-  reset();
-}
-
-///////////////////////////////////////////////////////////////////////  
-// Assign logical voices and configuration to the channel
-void CLogicalChannel::assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf)
-{
-  m_voiceBegin = voiceBegin;
-  m_voiceEnd = m_voiceEnd;
-  m_conf = conf;
-}
-
+//
+// PRIVATE MEMBERS
+//
 ///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::start() {
-  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
-    Voice[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
-  }
-}
-
-///////////////////////////////////////////////////////////////////////
-// RESET 
-// Resets channel state
-void CLogicalChannel::reset() {
-  m_flags = 0;
-  m_fPitchBend = 0;
-  m_fModWheel = 0;  
-  m_fLFO = 0.0;
-  m_fLFOBipolar = 0.0;
-  m_fPortamentoNote = 0.0;
-  m_fDetuneStep = 0.0;  
-  m_arpCounter = 0;
-  m_arpIndex = 0;
-  m_fLFOCount = 0;
-  m_portaTargetNote = 0;
-  m_fPortaStep = 0; 
-  quiet();
-}
-
-///////////////////////////////////////////////////////////////////////
-// QUIET
-void CLogicalChannel::quiet() {
-  // clear the note stack
-  m_noteCount = 0;
-}
 
 ///////////////////////////////////////////////////////////////////////
 // SET A FLAG BIT BASED ON CC VALUE
@@ -174,13 +156,19 @@ byte CLogicalChannel::ccMapValue(char value, int maxValue) {
 
 
 ///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {    
-
+// Called when a new note is triggered on the channel
+void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) 
+{    
+  CLogicalVoice *voice = NULL;
+  
+  // Check if the channel LFO needs to be restarted 
+  // on each note trigger
   switch(m_conf->eLFOMode)
   {
   case TONE_CONFIG::LFO_TRIG_FREE:
   case TONE_CONFIG::LFO_TRIG_GATE:
   case TONE_CONFIG::LFO_ONE_SHOT:
+    // Yes - so restart the LFO cycle
     m_fLFOCount = 0.0;
     m_flags &= ~SF_LFOSIGN;
     m_flags &= ~SF_LFOCOMPLETE;
@@ -192,9 +180,9 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
     break;
   }
 
-  CLogicalVoice *voice = NULL;
-
-  if(m_conf->flags & (TONE_CONFIG::UNISON|TONE_CONFIG::ARPEGGIATE))
+  //////////////////////////////////////////////////////////////////
+  // CHANNEL CONFIGURED IN UNISON MODE
+  if(m_conf->flags & TONE_CONFIG::UNISON)
   {
     // check if a nonzero portamento setting is defined
     if(m_conf->portaTime) {
@@ -207,7 +195,7 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
         
         // calculate step rate based on distance between the old and new note
         // and the portamento time setting        
-        m_fPortaStep = (note - m_fPortamentoNote) / (float)m_conf->portaTime;
+        m_fPortaStep = 2.0 * (note - m_fPortamentoNote) / (float)m_conf->portaTime;
       }
       else {
         // just remember the note for next time!
@@ -229,10 +217,12 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
       }
     }
   }
+  //////////////////////////////////////////////////////////////////
+  // POLYPHONIC CHANNEL
   else
-  {
+  {    
     // check if the note is already assigned to a channel...
-    // if it is, then retrigger it
+    // if it is, then we will retrigger it
     for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
       if(Voice[i].m_midi_note == note) {
         voice = &Voice[i];
@@ -257,9 +247,15 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv) {
         }
       }
     }
+    
+    // Did we get a voice to assign the note to?
     if(voice) {
+      
+      // assign the note to the voice
       voice->m_midi_note = note;
       voice->m_midi_vel = velocity;
+      
+      // retrigger envelopes if needed
       if(trigEnv) {
         trigEnvelope(&m_conf->ampEnv, &voice->m_amp);
         trigEnvelope(&m_conf->modEnv, &voice->m_mod);
@@ -297,7 +293,7 @@ byte CLogicalChannel::deleteNote(byte note) {
 ///////////////////////////////////////////////////////////////////////
 // HANDLE NOTE ON MESSAGE
 void CLogicalChannel::handleNoteOn(byte note, byte velocity)
-{
+{  
   // ensure the note is not already in the list (if
   // it is, it will be moved to top of list)
   deleteNote(note);
@@ -320,7 +316,7 @@ void CLogicalChannel::handleNoteOn(byte note, byte velocity)
     int nextMute = m_noteCount-voiceCount-1;
     untrig(m_notes[nextMute].note);
   }
-  // trigger the newest note
+  // trigger the newest note, triggering the amp envelope
   trig(note, (m_conf->flags & TONE_CONFIG::USE_VELOCITY)? velocity:127, true);
 }
 
@@ -371,7 +367,7 @@ void CLogicalChannel::handleCC(char cc, char value)
       }
       if(mode != m_conf->ePokeyMode) {
         m_conf->ePokeyMode = mode;
-        m_flags |= SF_RECONFIG;
+//        m_flags |= SF_RECONFIG;
       }
     }
     break;
@@ -380,7 +376,7 @@ void CLogicalChannel::handleCC(char cc, char value)
       byte flags = m_conf->flags;
       ccFlag(&flags, TONE_CONFIG::POKEY_DUAL, value); 
       if(flags != m_conf->flags) {
-        m_flags |= SF_RECONFIG;
+//        m_flags |= SF_RECONFIG;
         m_conf->flags = flags;
       }
     }
@@ -427,19 +423,19 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->fLFOStep = 1.0/(128.0-value); 
     break;
   case CC_AENVATTACK: 
-    m_conf->ampEnv.fAttackStep = envStep(value);
+    m_conf->ampEnv.attackSlope = envSlope(value,0);
     break;
   case CC_AENVRELEASE: 
-    m_conf->ampEnv.fReleaseStep = envStep(value);
+    m_conf->ampEnv.releaseSlope = envSlope(value,1);
     break;
   case CC_AENVMODE:
     m_conf->ampEnv.mode = ccMapValue(value, ENVELOPE::MAX_MODE); 
     break;
   case CC_MENVATTACK: 
-    m_conf->modEnv.fAttackStep = envStep(value);
+    m_conf->modEnv.attackSlope = envSlope(value,0);
     break;
   case CC_MENVRELEASE: 
-    m_conf->modEnv.fReleaseStep = envStep(value);
+    m_conf->modEnv.releaseSlope = envSlope(value,1);
     break;
   case CC_MENVMODE: 
     m_conf->modEnv.mode = ccMapValue(value, ENVELOPE::MAX_MODE); 
@@ -541,45 +537,6 @@ void CLogicalChannel::handleCC(char cc, char value)
   }
 }
 
-///////////////////////////////////////////////////////////////////////  
-// HANDLE MIDI MESSAGE
-void CLogicalChannel::handle(byte status, byte *params)
-{
-  byte cmd = (status & 0xF0);
-  switch(cmd) {    
-  case 0x80:
-  case 0x90:
-    if(cmd == 0x80 || cmd == 0x90) {
-      if(cmd == 0x80 || params[1] == 0x00) {
-        handleNoteOff(params[0]);
-      }
-      else {
-        handleNoteOn(params[0], params[1]);
-      }        
-    }
-    break;
-  case 0xB0: 
-    handleCC(params[0], params[1]);
-    break;
-  case 0xE0: 
-    handlePitchBend(params[0], params[1]);
-    break;
-  }    
-}
-
-///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::div8_high(byte v) {
-  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
-    Voice[i].div8_high(v);
-  }
-}
-///////////////////////////////////////////////////////////////////////
-void CLogicalChannel::dist_poly9(byte v) {
-  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
-    Voice[i].dist_poly9(v);
-  }
-}
-
 ///////////////////////////////////////////////////////////////////////
 // recalculate voice detune
 void CLogicalChannel::recalc_detune()
@@ -627,7 +584,6 @@ void CLogicalChannel::runEnvelopes()
     for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {       
       if(runEnvelope(&m_conf->ampEnv, &Voice[i].m_amp)) {
         Voice[i].reset();
-//        m_voices[v].m_midi_note = 0;
       }
       runEnvelope(&m_conf->modEnv, &Voice[i].m_mod);
     }
@@ -736,25 +692,42 @@ void CLogicalChannel::runLFO()
 }
 
 ///////////////////////////////////////////////////////////////////////
+// RUN PORTAMENTO STATE MACHINE
 void CLogicalChannel::runPortamento() 
 {
   // is portamento in progress? 
   if(m_portaTargetNote) {
+    
     // calculate next note    
-    float d = m_fPortamentoNote + m_fPortaStep;
-    if(m_fPortamentoNote > m_portaTargetNote && d < m_portaTargetNote) {
-      // reached target note
-      m_fPortamentoNote = m_portaTargetNote;
-      m_portaTargetNote = 0;
+    m_fPortamentoNote += m_fPortaStep;
+    
+    // gliding up?
+    if(m_fPortaStep > 0.001) {
+      
+      // reached target note?
+      if(m_fPortamentoNote >= m_portaTargetNote) {
+        
+        // stop portamento-ing!
+        m_fPortamentoNote = m_portaTargetNote;
+        m_portaTargetNote = 0;
+      }
     }
-    else if(m_fPortamentoNote < m_portaTargetNote && d > m_portaTargetNote) {
-      // reached target note
-      m_fPortamentoNote = m_portaTargetNote;
-      m_portaTargetNote = 0;
+    // gliding down?
+    else if(m_fPortaStep < -0.001) {
+      
+      // reached target note?
+      if(m_fPortamentoNote <= m_portaTargetNote) {
+        
+        // stop
+        m_fPortamentoNote = m_portaTargetNote;
+        m_portaTargetNote = 0;
+      }
     }
     else {
-      // still portamenting..
-      m_fPortamentoNote = d;
+      
+        // hmm..
+        m_fPortamentoNote = m_portaTargetNote;
+        m_portaTargetNote = 0;
     }
   }
 }
@@ -805,7 +778,8 @@ void CLogicalChannel::runDetune()
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::runArpeggiator() 
 {
-    if((m_conf->flags & TONE_CONFIG::ARPEGGIATE) && (m_noteCount > 0)) {
+    const byte ARPEGGIATE = TONE_CONFIG::ARPEGGIATE|TONE_CONFIG::UNISON;
+    if((m_conf->flags & ARPEGGIATE) == ARPEGGIATE && (m_noteCount > 0)) {
 
       float arpPeriod = m_conf->arpPeriod;
       if(m_conf->modEnvDest & TONE_CONFIG::TO_ARP_RATE) {
@@ -843,19 +817,121 @@ void CLogicalChannel::runArpeggiator()
     }
 }
 
+
+///////////////////////////////////////////////////////////////////////
+//
+// PUBLIC MEMBERS
+//
+///////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////
+CLogicalChannel::CLogicalChannel() 
+{
+  m_conf = NULL;
+  m_voiceBegin = 0;
+  m_voiceEnd = 0;
+  m_midiChannel = 0;
+  reset();
+}
+
+///////////////////////////////////////////////////////////////////////  
+void CLogicalChannel::assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf)
+{
+  m_voiceBegin = voiceBegin;
+  m_voiceEnd = voiceEnd;
+  m_conf = conf;
+}
+
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::start() {
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].div8_high(m_conf->flags & TONE_CONFIG::POKEY_HIHZ);     
+  }
+}
+
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::reset() {
+  m_flags = 0;
+  m_fPitchBend = 0;
+  m_fModWheel = 0;  
+  m_fLFO = 0.0;
+  m_fLFOBipolar = 0.0;
+  m_fPortamentoNote = 0.0;
+  m_fDetuneStep = 0.0;  
+  m_arpCounter = 0;
+  m_arpIndex = 0;
+  m_fLFOCount = 0;
+  m_portaTargetNote = 0;
+  m_fPortaStep = 0; 
+  quiet();
+}
+
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::quiet() {
+  // clear the note stack
+  m_noteCount = 0;
+}
+
+
+///////////////////////////////////////////////////////////////////////  
+void CLogicalChannel::handle(byte status, byte *params)
+{
+  byte cmd = (status & 0xF0);
+  switch(cmd) {    
+  case 0x80:
+  case 0x90:
+    if(cmd == 0x80 || cmd == 0x90) {
+      if(cmd == 0x80 || params[1] == 0x00) {
+        handleNoteOff(params[0]);
+      }
+      else {
+        handleNoteOn(params[0], params[1]);
+      }        
+    }
+    break;
+  case 0xB0: 
+    handleCC(params[0], params[1]);
+    break;
+  case 0xE0: 
+    handlePitchBend(params[0], params[1]);
+    break;
+  }    
+}
+
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::div8_high(byte v) {
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].div8_high(v);
+  }
+}
+///////////////////////////////////////////////////////////////////////
+void CLogicalChannel::dist_poly9(byte v) {
+  for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
+    Voice[i].dist_poly9(v);
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::update(byte ticks)  
 {
-    switch(ticks & 0x7) {
+//  indicateTest(m_noteCount > 1);
+  
+    // This method is called every 1 millisecond
+    // The channel state machine updates run on a 16ms repeating 
+    // cycle. This switch decides the order (and number of times)
+    // each of the channel state machines gets invoked on each
+    // cycle
+    switch(ticks & 0xF) {
+      // ENVELOPE - once every 16ms
       case 0: runEnvelopes(); 
         break;
-      case 1: runLFO();
+//      case 1: runLFO();
         break;
       case 2: runPortamento();
         break;
-      case 3: runDetune();
+//      case 3: runDetune();
         break;
-      case 4: runArpeggiator();
+//      case 4: runArpeggiator();
         break;
     }
 }

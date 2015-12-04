@@ -218,7 +218,7 @@ void CPokey::pitch(byte voice, float hz) {
   if(m_flags & FLAG_DIV16) {
       unsigned int v = hz_to_div16(hz);
       if(!v) {
-        vol(voice,0);
+        quiet(voice);
       }
       else {
         write_reg(Divider[voice&3], v>>8);
@@ -234,7 +234,7 @@ void CPokey::pitch(byte voice, float hz) {
         v = hz_to_div8_hi(hz);
       }
       if(!v) {
-        vol(voice,0);
+        quiet(voice);
       }
       else {
         write_reg(Divider[voice&3], v);
@@ -245,8 +245,22 @@ void CPokey::pitch(byte voice, float hz) {
 //////////////////////////////////////////////////
 // SET VOLUME OF A VOICE
 void CPokey::vol(byte voice, float v) {
+  // check for valid divider
+  if(m_data[Divider[voice&3]]) { 
+    byte ctrl_reg = Control[voice&3];
+    write_reg(ctrl_reg, (m_data[ctrl_reg] & 0xF0)|(byte)(0.5+15.0*v));
+  }
+}
+
+//////////////////////////////////////////////////
+// SILENCE A VOICE
+void CPokey::quiet(byte voice) {
+  // set the pitch divider to 0 to indicate invalid
+  write_reg(Divider[voice&3], 0);
+  
+  // set volume to 0
   byte ctrl_reg = Control[voice&3];
-  write_reg(ctrl_reg, (m_data[ctrl_reg] & 0xF0)|(byte)(0.5+15.0*v));
+  write_reg(ctrl_reg, (m_data[ctrl_reg] & 0xF0));
 }
 
 //////////////////////////////////////////////////
@@ -279,7 +293,7 @@ void CPokey::dist(byte voice, float v) {
 // SET HIGH PASS FILTER DIVIDER OF A VOICE
 void CPokey::hpf(byte voice, float v) {
   if(m_flags & FLAG_HPF) {
-    write_reg(HighPass[voice&3], v);
+    write_reg(HighPass[voice&3], 256 * (1.0 - v));
   }
 }
   

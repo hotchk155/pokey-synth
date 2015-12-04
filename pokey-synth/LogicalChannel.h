@@ -43,22 +43,40 @@ class CLogicalChannel
   char m_voiceBegin; 
   char m_voiceEnd;   
 
-public:  
+  // Flags bits
+  enum {
+    SF_LFOSIGN      = 0x01,
+    SF_LFOCOMPLETE  = 0x02,
+//    SF_RECONFIG     = 0x04
+  };
   
+  // flags register
+  byte m_flags;
+
+  // Private methods
+  void handleNoteOn(byte note, byte velocity);
+  void handleNoteOff(byte note);
+  void handleCC(char cc, char value);
+  void handlePitchBend(byte lo, byte hi);
+  void ccFlag(byte *flags, int flag, char value);
+  void ccFlag(byte *flags, byte *negFlags, int flag, char value);  
+  byte ccMapValue(char value, int maxValue);
+  byte deleteNote(byte note);
+  void trig(byte note, byte velocity, byte trigEnv);  
+  void untrig(byte note);
+  void recalc_detune();
   void runEnvelopes();
   void runLFO(); 
   void runPortamento(); 
   void runDetune(); 
   void runArpeggiator(); 
-    
+
 public:  
-  enum {
-    SF_LFOSIGN      = 0x01,
-    SF_LFOCOMPLETE  = 0x02,
-    SF_RECONFIG     = 0x04
-  };
+  
+  // MIDI channel 0..15
   byte m_midiChannel;
-  byte m_flags;
+  
+  // Pointer to "patch" info
   TONE_CONFIG *m_conf;
 
   // State info
@@ -79,27 +97,14 @@ public:
   float           m_fPortaStep;      // portamento pitch change per 8ms
   
   CLogicalChannel();  
-  void assign(byte voiceBase, byte voiceCount, TONE_CONFIG *conf);
-  byte deleteNote(byte note);
+  void assign(byte voiceBegin, byte voiceEnd, TONE_CONFIG *conf);
   void handle(byte status, byte *params);
-  void handleNoteOn(byte note, byte velocity);
-  void handleNoteOff(byte note);
-  void handleCC(char cc, char value);
-  void handlePitchBend(byte lo, byte hi);
-  void trig(byte note, byte velocity, byte trigEnv);  
-  void untrig(byte note);
-  void tick(byte counter) ;
-  void ccFlag(byte *flags, int flag, char value);
-  void ccFlag(byte *flags, byte *negFlags, int flag, char value);  
-  byte ccMapValue(char value, int maxValue);
-  void recalc_detune();
   void reset();
   void quiet();
   void div8_high(byte v);
   void dist_poly9(byte v);
   void update(byte ticks);
-  void start();
-  
+  void start();  
 };
 
 // Declare the global channel instances

@@ -24,7 +24,7 @@
 
 
 enum {
-  MAX_CHANNEL = 2,
+  MAX_CHANNEL = 1,
   MAX_VOICES_PER_CHANNEL = 4,
   MAX_VOICE = (MAX_CHANNEL * MAX_VOICES_PER_CHANNEL)    
 };
@@ -33,13 +33,13 @@ enum {
 // CONTROLLER NUMBERS
 enum {  
   CC_MOD       = 1,
+  CC_PORTATIME   = 5,
   
   CC_MIDIVEL    = 14,     
   CC_UNISON     = 15,    
   CC_TRANSPOSE  = 16,
   CC_FINETUNE   = 17,
   CC_PBRANGE    = 18,
-  CC_PORTATIME   = 19,
   CC_HPF        = 20,
   CC_DIST       =21,    
 
@@ -94,6 +94,7 @@ enum {
 //  CC_POKEYPOLY9   = 95,
 };
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // ENVELOPE CONFIGURATION
 typedef struct {
@@ -101,13 +102,13 @@ typedef struct {
     ATT_REL,              // attack, sustain until note off, release 
     ATT_DEC,              // attack, release 
     ATT_RPT_REL,          // repeat attack until note off, release 
-    ATT_DEC_RPT_REL,      // repeat attack-release until note off, release 
+    ATT_DEC_RPT,          // repeat attack-decay until note off
     LOOP,                 // repeat attack-release forever
     MAX_MODE
   };
   byte    mode;           // mode as above
-  float   fAttackStep;    // 
-  float   fReleaseStep;   // 
+  unsigned int attackSlope;     // } Attack and release slopes are defined by the
+  unsigned int releaseSlope;    // } increment per 16ms, where 65535 is full volume
 } ENVELOPE;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -189,7 +190,7 @@ typedef struct {
   char            transpose;        // semitone offset -63 to +63 (semitones)
   float           fFineTune;         // fine tune offset (semitones)  
   char            pitchBendRange;   // pitch bend range (semitones)
-  char            portaTime;        // portamento time
+  char            portaTime;        // portamento time (16ms per increment)
   char            detuneLevel;      // detune level -63 to +63 (units depend on mode)
   char            eDetuneMode;      // detune mode
   char            hpf;              // 0-127 high pass filter level
@@ -197,7 +198,7 @@ typedef struct {
   char            eLFOMode;         // LFO run mode
   float           fLFOStep;         // LFO run step (increment per 8ms of the 0.0-1.0 full range)
   char            eLFOWave;         // LFO wave form
-  char            arpPeriod;        // time between consecutive arp notes (in 8ms increments)  
+  char            arpPeriod;        // time between consecutive arp notes 
   char            arpCount;         // max notes to include in arpeggio
   ENVELOPE        ampEnv;
   ENVELOPE        modEnv;
@@ -218,6 +219,12 @@ typedef struct {
   byte            modWheelDestNeg;
 } TONE_CONFIG;
 
+extern TONE_CONFIG Patch[MAX_CHANNEL];
+
 extern void failTest(int t);
+extern void indicateTest(int test);
+
 #define TEST_CONDITION(c, t) { if(!(c)) failTest(t); }
+
+
 
