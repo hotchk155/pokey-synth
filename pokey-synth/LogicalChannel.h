@@ -59,8 +59,8 @@ class CLogicalChannel
   void handleCC(char cc, char value);
   void handlePitchBend(byte lo, byte hi);
   void ccFlag(byte *flags, int flag, char value);
-  void ccFlag(byte *flags, byte *negFlags, int flag, char value);  
   byte ccMapValue(char value, int maxValue);
+  char ccModDepth(char v);
   byte deleteNote(byte note);
   void trig(byte note, byte velocity, byte trigEnv);  
   void untrig(byte note);

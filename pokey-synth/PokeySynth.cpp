@@ -51,12 +51,12 @@ void CPokeySynth::initPatch(TONE_CONFIG *conf)
   conf->modEnv.attackSlope = 127;
   conf->modEnv.releaseSlope = 127;
   conf->modEnv.mode = ENVELOPE::ATT_REL;  
-  conf->modEnv2Pitch = 0;
-  conf->modEnvDepth = 0;
+  conf->xmodEnv2Pitch = 0;
+  conf->xmodEnvDepth = 0;
   conf->modEnvDest = 0;
-  conf->lfo2Vol = 100;
-  conf->lfo2Pitch = 0;
-  conf->lfoDepth = 0;
+  conf->xlfo2Vol = 100;
+  conf->xlfo2Pitch = 0;
+  conf->xlfoDepth = 0;
   conf->lfoDest = 0;
   conf->modWheelDest = TONE_CONFIG::TO_ARP_RATE;
 }

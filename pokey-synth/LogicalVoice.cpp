@@ -67,8 +67,8 @@ void CLogicalVoice::update()
   CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
 
   float value;
-  float lfoDepth;
-  
+  float modDepth;
+
   CLogicalChannel *channel = &Channel[m_channel];
   TONE_CONFIG *conf = channel->m_conf;
   
@@ -89,15 +89,13 @@ void CLogicalVoice::update()
   // add transpose, detune, pitch bend
   value = value + (m_detuneFactor * channel->m_fDetuneStep) + channel->m_fPitchBend + conf->transpose + conf->fFineTune;
   
-  // add envelope modulation
-//  if(conf->modEnv2Pitch) {
-//    value = value + m_mod.fValue * conf->modEnv2Pitch/(63.0/12.0);
-//  }
-  
-  // add LFO modulation
-  if(conf->lfo2Pitch) {
-    value = value + channel->m_fLFO * conf->lfo2Pitch/(127.0/12.0);
-  }  
+  // The LFO modulates the pitch by simply adding the scaled waveform to it. A full setting of 
+  // LFO-to-pitch controller will correspond +1/-1 octave deviation of pitch
+  value = value + channel->m_fLFO * conf->ylfo2Pitch/(127.0/12.0);
+
+  // Likewise the mod evelope value is added. A full setting of Mod Env-to-pitch will correspond to
+  // +1/-1 octave deviation of pitch
+  value = value + m_mod.fValue * conf->ymodEnv2Pitch/(127.0/12.0);
   
   // calculate hz value
   value = 440.0 * pow(2.0,((value-57.0)/12.0));
@@ -118,12 +116,12 @@ void CLogicalVoice::update()
     value = m_midi_vel/127.0;
   }
 
-  // The volume is modulated by the LFO and the mod envelope, which are 
+  // The volume is modulated by the LFO and the amp envelope, which are 
   // mixed according to the LFO-to-Volume depth controller
-  lfoDepth = conf->lfo2Vol / 127.0;
+  modDepth = conf->ylfo2Vol / 127.0;    
   value *= (
-    (1.0 - lfoDepth) * m_amp.fValue +
-    (lfoDepth * channel->m_fLFO)
+      (1.0 - modDepth) * m_amp.fValue + 
+      (modDepth * channel->m_fLFO)
   );
   
   // apply to POKEY channel
@@ -133,35 +131,38 @@ void CLogicalVoice::update()
   // DISTORTION
   ////////////////////////////////////////////////////////////////////////////////
   
-  // mod wheel
+  // Fetch the distortion value (scaled to range 0.0-1.0) from either the
+  // distortion controller or mod wheel if overriding it
   if(conf->modWheelDest & TONE_CONFIG::TO_DIST) {
     value = channel->m_fModWheel;
   }
   else {
     value = conf->dist/127.0;
   }
-  //else if(conf->modWheelDestNeg & TONE_CONFIG::TO_DIST) {
-  //  value *= (1.0-channel->m_fModWheel);
-  //}
 
-/*
-  // envelope modulation  
-  if(conf->modEnvDest & TONE_CONFIG::TO_DIST) {
-    value = value * m_mod.fValue;
+  // if LFO affects distortion then mix in the 
+  // LFO level based on the LFO Depth controller
+  if((conf->modEnvDest & TONE_CONFIG::TO_DIST) {
+    modDepth = conf->ylfoDepth/127.0;
+    value = (
+      (1.0 - modDepth) * value + 
+      (modDepth * m_mod.fValue)
+    );
   }
-  else if(conf->modEnvDestNeg & TONE_CONFIG::TO_DIST) {
-    value = value * (1.0 - m_mod.fValue);
+
+  // if Mod Env affects distortion then mix in the 
+  // Mod Env level based on the Mod Env Depth controller
+  // Note - LFO and Mod Env levels are *added* here. For 
+  // *scaling* the LFO depth based on the Mod Env there is a
+  // Mod Env -> LFO Depth controller!
+  if((conf->modEnvDest & TONE_CONFIG::TO_DIST) {
+    modDepth = conf->xmodEnvDepth/127.0;
+    value = (
+      (1.0 - modDepth) * value + 
+      (modDepth * m_mod.fValue)
+    );
   }
-  
-  // LFO modulation
-  if(conf->lfoDest & TONE_CONFIG::TO_DIST) {
-    value *= channel->m_fLFO;
-  }
-  else if(conf->lfoDestNeg & TONE_CONFIG::TO_DIST) {
-    value *= (1.0 - channel->m_fLFO);
-  }
-  */
-    
+
   // apply final distortion value to channel
   pokey->dist(m_voice, value);
   

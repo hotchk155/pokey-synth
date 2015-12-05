@@ -218,19 +218,16 @@ typedef struct {
   ENVELOPE        ampEnv;           // amplitude envelope configuration
   ENVELOPE        modEnv;           // modulation envelope configuration
   
-  char            modEnv2Pitch;     
-  char            modEnvDepth;      
-  byte            modEnvDest;
-//  byte            modEnvDestNeg;    
+  char            ymodEnv2Pitch;     // 0..127
+  char            ymodEnvDepth;      // 0..127
+  byte            modEnvDest;       
   
-  char            lfo2Vol;
-  char            lfo2Pitch;
-  char            lfoDepth;
+  char            ylfo2Vol;          // 0..127
+  char            ylfo2Pitch;        // 0..127
+  char            ylfoDepth;         // 0..127
   byte            lfoDest;
-//  byte            lfoDestNeg;
   
   byte            modWheelDest;
-//  byte            modWheelDestNeg;
 } TONE_CONFIG;
 
 extern TONE_CONFIG Patch[MAX_CHANNEL];

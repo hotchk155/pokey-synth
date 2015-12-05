@@ -139,28 +139,16 @@ void CLogicalChannel::ccFlag(byte *flags, int flag, char value) {
 }
 
 ///////////////////////////////////////////////////////////////////////
-// SET A FLAG BIT BASED ON CC VALUE
-void CLogicalChannel::ccFlag(byte *flags, byte *negFlags, int flag, char value) {
-  if(value < 43) {
-    *negFlags |= flag;
-    *flags &= ~flag;
-  }
-  else if(value > 84) {
-    *negFlags &= ~flag;
-    *flags |= flag;
-  }
-  else {
-    *flags &= ~flag;
-    *negFlags &= ~flag;
-  }
-}
-
-///////////////////////////////////////////////////////////////////////
 // MAP A CC VALUE (0-127) TO A SET OF INTEGERS
 byte CLogicalChannel::ccMapValue(char value, int maxValue) {
   return maxValue * value/128.0;
 }
 
+///////////////////////////////////////////////////////////////////////
+// MAP CC VALUE TO A MOD DEPTH
+char CLogicalChannel::ccModDepth(char v) {
+  return v;
+}
 
 ///////////////////////////////////////////////////////////////////////
 // Called when a new note is triggered on the channel
@@ -485,13 +473,13 @@ void CLogicalChannel::handleCC(char cc, char value)
       
   // MOD MATRIX SETTINGS FOR LFO
   case CC_LFO_2_PITCH:
-    m_conf->lfo2Pitch = value; 
+    m_conf->ylfo2Pitch = ccModDepth(value); 
     break;    
   case CC_LFO_2_VOL:
-    m_conf->lfo2Vol = value; 
+    m_conf->ylfo2Vol = ccModDepth(value); 
     break;
   case CC_LFO_2_MATRIX:
-    m_conf->lfoDepth = value; 
+    m_conf->ylfoDepth = ccModDepth(value); 
     break;        
   case CC_LFO_2_DIST:
     ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_DIST, value); 
@@ -508,10 +496,10 @@ void CLogicalChannel::handleCC(char cc, char value)
 
   // MOD MATRIX SETTINGS FOR MOD ENVELOPE          
   case CC_ENV_2_PITCH:
-    m_conf->modEnv2Pitch = value-64; 
+    m_conf->ymodEnv2Pitch = ccModDepth(value); 
     break;    
   case CC_ENV_2_MATRIX:
-    m_conf->modEnvDepth = value-64; 
+    m_conf->ymodEnvDepth = ccModDepth(value); 
     break;    
   case CC_ENV_2_DISTORTION:
     ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_DIST, value); 
