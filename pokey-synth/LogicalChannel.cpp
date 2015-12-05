@@ -176,12 +176,12 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv)
   case TONE_CONFIG::LFO_TRIG_GATE:
   case TONE_CONFIG::LFO_ONE_SHOT:
     // Yes - so restart the LFO cycle
-    m_fLFOCount = 0.0;
-    m_flags &= ~SF_LFOSIGN;
+    m_fLFOPhase = 0.0;
+    m_flags |= SF_LFOSIGN;
     m_flags &= ~SF_LFOCOMPLETE;
     break;
-  case TONE_CONFIG::LFO_GATE:   
   case TONE_CONFIG::LFO_UNGATE:
+  case TONE_CONFIG::LFO_GATE:   
   case TONE_CONFIG::LFO_FREE:      
   default:
     break;
@@ -276,6 +276,7 @@ void CLogicalChannel::trig(byte note, byte velocity, byte trigEnv)
 
 ///////////////////////////////////////////////////////////////////////
 void CLogicalChannel::untrig(byte note) {
+    
   for(int i=m_voiceBegin; i<m_voiceEnd; ++i) {
     if(Voice[i].m_midi_note == note) {      
       untrigEnvelope(&m_conf->ampEnv, &Voice[i].m_amp);
@@ -347,7 +348,7 @@ void CLogicalChannel::handleNoteOff(byte note)
       // reactivate a note that was previously overridden
       trig(m_notes[m_noteCount-voiceCount].note,  (m_conf->flags & TONE_CONFIG::USE_VELOCITY)? m_notes[m_noteCount-voiceCount].velocity : 127, true);
     }
-  }
+  }  
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -439,7 +440,7 @@ void CLogicalChannel::handleCC(char cc, char value)
     m_conf->arpCount = 1 + value/16; 
     break;
   case CC_LFORATE: 
-    m_conf->fLFOStep = 1.0/(128.0-value); 
+    m_conf->lfoRate = value; 
     break;
   case CC_AENVATTACK: 
     m_conf->ampEnv.attackSlope = envSlope(value,0);
@@ -484,10 +485,10 @@ void CLogicalChannel::handleCC(char cc, char value)
       
   // MOD MATRIX SETTINGS FOR LFO
   case CC_LFO_2_PITCH:
-    m_conf->lfo2Pitch = value-64; 
+    m_conf->lfo2Pitch = value; 
     break;    
   case CC_LFO_2_VOL:
-    m_conf->lfo2Vol = value-64; 
+    m_conf->lfo2Vol = value; 
     break;
   case CC_LFO_2_MATRIX:
     m_conf->lfoDepth = value; 
@@ -626,105 +627,166 @@ void CLogicalChannel::runEnvelopes()
 }
 
 ///////////////////////////////////////////////////////////////////////
+// RUN THE LFO
+// The LFO member, m_fLFO, has a value -1.0 .. +1.0 based on the 
+// selected wave form. All wave types are derived from an internal
+// triangle wave for which one complete cycle runs 0 .. +1 .. 0 .. -1 .. 
 void CLogicalChannel::runLFO() 
 {
-    // work out if the LFO counter should be running
+    // The following block gates the LFO based on the 
+    // LFO run mode
     byte lfoRun = 1;
     switch(m_conf->eLFOMode)
     {      
     case TONE_CONFIG::LFO_HOLD:
-      lfoRun = 0;
+      lfoRun = 0;  // LFO held - not running
       break;
     case TONE_CONFIG::LFO_ONE_SHOT:
-      lfoRun = !(m_flags & SF_LFOCOMPLETE);
+      lfoRun = !(m_flags & SF_LFOCOMPLETE); // LFO in one shot mode
       break; 
     case TONE_CONFIG::LFO_TRIG_GATE:
     case TONE_CONFIG::LFO_GATE:   
-      lfoRun = !!m_noteCount;
+      if(m_noteCount) {
+        lfoRun = 1; // LFO runs only when notes are held
+      } else {
+        m_fLFOPhase = 0.0; // reset the LFO phase
+      }      
       break;          
     case TONE_CONFIG::LFO_UNGATE:
-      lfoRun = !m_noteCount;
+      if(!m_noteCount) {
+        lfoRun = 1;  // LFO runs only when notes are not held
+      }
+      else {
+        m_fLFOPhase = 0.0; // reset the LFO phase
+      }
       break;
     }    
+
+    // flags a zero crossing
+    byte zeroCrossing = 0;
+    
+    // is the LFO running?
     if(lfoRun) {        
-           
-      // Modulation of the LFO rate
-      float fLFOStep = m_conf->fLFOStep;
+                 
+      // Get floating point LFO rate
+      float fLFORate = (1+m_conf->lfoRate)/127.0;
+      
+      /*
       if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_RATE) {
         fLFOStep *= m_fModWheel;
       }
-      //else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
-        //fLFOStep *= (1.0-m_fModWheel);
-//      }
 
       if(isSingleNoteChan(m_conf)) {
         if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_RATE) {
           fLFOStep *= Voice[m_voiceBegin].m_mod.fValue;
         }
-//        else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_RATE) {
-//          fLFOStep *= (1.0-Voice[m_voiceBegin].m_mod.fValue);
-//        }
       }
+      */
 
-      // Update the LFO counter
+      // Update the phase of the triangle wave counter
       if(m_flags & SF_LFOSIGN) {
-        m_fLFOCount += fLFOStep;
-        if(m_fLFOCount >= 1.0) {
-          m_fLFOCount = 1.0;
+        // wave is rising
+        float f = m_fLFOPhase + fLFORate;
+        if(m_fLFOPhase < 0 && f > 0) {
+          zeroCrossing = 1;
+        }
+        if(f >= 1.0) {
+          // start to fall
+          m_fLFOPhase = 1.0;
           m_flags &= ~SF_LFOSIGN;
+        } else {
+          m_fLFOPhase = f;
         }
       }
       else {
-        m_fLFOCount -= fLFOStep;
-        if(m_fLFOCount <= 0.0) {
-          m_fLFOCount = 0.0;
+        // wave is falling
+        float f = m_fLFOPhase - fLFORate;
+        if(m_fLFOPhase > 0 && f < 0) {
+          zeroCrossing = 1;
+          // zero crossing on falling wave marks end of cycle
+          m_flags |= SF_LFOCOMPLETE; 
+        }
+        if(f  <= -1.0) {
+          // start to rise
+          m_fLFOPhase = -1.0;
           m_flags |= SF_LFOSIGN;
-          m_flags |= SF_LFOCOMPLETE;
+        }
+        else {
+          m_fLFOPhase = f;
         }
       }
     }
 
+    // The following block converts the triangle wave phase
+    // into the appropriate LFO wave form    
     switch(m_conf->eLFOWave) 
     {
-    case TONE_CONFIG::WAVE_TRI:  // TRIANGLE
-      m_fLFO = m_fLFOCount;
+    // TRIANGLE WAVE LFO
+    // simples!
+    case TONE_CONFIG::WAVE_TRI:  
+      m_fLFO = m_fLFOPhase; 
       break;
-    case TONE_CONFIG::WAVE_SQ:   // SQUARE  
-      m_fLFO = (m_flags & SF_LFOSIGN)? 0.0 : 1.0;
+
+    // SQUARE WAVE LFO
+    // take the sign of the triangle value
+    case TONE_CONFIG::WAVE_SQ:  
+      m_fLFO = (m_fLFOPhase > 0)? 1.0 : -1.0;
       break;
-    case TONE_CONFIG::WAVE_RAMP:    // RAMP UP
-      m_fLFO = (m_flags & SF_LFOSIGN)? (m_fLFOCount/2.0) : (1.0 - (m_fLFOCount/2.0));
-      break;
-    case TONE_CONFIG::WAVE_REVRAMP:    // RAMP DOWN
-      m_fLFO = (m_flags & SF_LFOSIGN)? (1.0 - (m_fLFOCount/2.0)) : (m_fLFOCount/2.0);
-      break;
-    case TONE_CONFIG::WAVE_RANDOM:
-      if(m_fLFOCount == 0.0) {
-        m_fLFO = random(1000) / 1000.0;
+
+    // RAMP LFO
+    // transform triangle based on quadrant of cycle
+    // and then negate for reverse ramp
+    case TONE_CONFIG::WAVE_RAMP:    
+    case TONE_CONFIG::WAVE_REVRAMP: 
+      if(m_flags & SF_LFOSIGN) { // rising
+        m_fLFO = m_fLFOPhase/2.0;
+      }
+      else { // falling wave
+        if(m_fLFOPhase >= 0) {  // positive value 
+          m_fLFO = 1.0 - m_fLFOPhase/2.0;
+        }
+        else {  // negative value
+          m_fLFO = -1.0 - m_fLFOPhase/2.0;
+        }
+      }
+      if(m_conf->eLFOWave == TONE_CONFIG::WAVE_REVRAMP) {
+        m_fLFO = -m_fLFO;
       }
       break;
-    }      
 
+    // RANDOM LFO
+    // create a pulse wave where both positive and 
+    // negative amplitudes are random (but have the
+    // correct sign)
+    case TONE_CONFIG::WAVE_RANDOM:
+      if(zeroCrossing) {
+        m_fLFO = random(1000)/ 1000.0;
+        if(!(m_flags & SF_LFOSIGN)) {
+          m_fLFO = - m_fLFO;
+        }
+      }
+      break;    
+    }      
+    
+    // calculate the positive-only LFO
+    m_fLFOPositive = 0.5 + m_fLFO/2.0;
+
+    /*
     m_fLFO *= m_conf->lfoDepth/127.0;
     if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_DEPTH) {
       m_fLFO *= m_fModWheel;
     }
-//    else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
-//      m_fLFO *= (1.0 - m_fModWheel);
-//    }
+    */
     
-    
+    /*
     if(isSingleNoteChan(m_conf)) {
       if(m_conf->modEnvDest & TONE_CONFIG::TO_LFO_DEPTH) {
         m_fLFO *= Voice[m_voiceBegin].m_mod.fValue;
       }
-//      else if(m_conf->modEnvDestNeg & TONE_CONFIG::TO_LFO_DEPTH) {
-//        m_fLFO *= (1.0 - Voice[m_voiceBegin].m_mod.fValue);
-//      }
     }
-
-    // calculate bipolar LFO
-    m_fLFOBipolar = (2.0*m_fLFO)-1.0;
+    */
+    
+    
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -807,10 +869,12 @@ void CLogicalChannel::runDetune()
 // RUN THE ARPEGGIATOR STATE MACHINE
 void CLogicalChannel::runArpeggiator() 
 {
+    // Arpeggiator can only run on single note channel (mono or unison) and only
+    // if arpeggiation is enabled!
     if((m_conf->flags & TONE_CONFIG::ARPEGGIATE) && isSingleNoteChan(m_conf) && (m_noteCount > 0)) {
 
-      float arpRate;
-      
+      // get arp rate (could be from mod wheel)
+      float arpRate;      
       if(m_conf->modWheelDest & TONE_CONFIG::TO_ARP_RATE) {
         arpRate = m_fModWheel; 
       } 
@@ -833,10 +897,13 @@ void CLogicalChannel::runArpeggiator()
         arpPeriod *= m_fLFO;
       }
 */      
+      // convert arp rate into arp period
       int arpPeriod = 100/(1+arpRate) - 50;
       
+      // check if next note is due
       if(--m_arpCounter <= 0)
       {          
+        // determine the next note
         if(m_arpIndex >= m_noteCount) { // reached the last note?            
           if(m_noteCount > m_conf->arpCount) { // need to arp just recent notes?
             m_arpIndex = m_noteCount - m_conf->arpCount;
@@ -845,7 +912,12 @@ void CLogicalChannel::runArpeggiator()
             m_arpIndex = 0;
           }            
         }      
-        trig(m_notes[m_arpIndex].note,  (m_conf->flags & TONE_CONFIG::USE_VELOCITY)? m_notes[m_arpIndex].velocity : 127, !!(m_conf->flags & TONE_CONFIG::ARP2ENV));      
+        
+        // trigger the bext note
+        trig(
+          m_notes[m_arpIndex].note,  
+          (m_conf->flags & TONE_CONFIG::USE_VELOCITY)? m_notes[m_arpIndex].velocity : 127, !!(m_conf->flags & TONE_CONFIG::ARP2ENV)
+        );      
         ++m_arpIndex;
         m_arpCounter = arpPeriod;
       }
@@ -889,12 +961,11 @@ void CLogicalChannel::start() {
   m_fPitchBend = 0;
   m_fModWheel = 0;  
   m_fLFO = 0.0;
-  m_fLFOBipolar = 0.0;
   m_fPortamentoNote = 0.0;
   m_fDetuneStep = 0.0;  
   m_arpCounter = 0;
   m_arpIndex = 0;
-  m_fLFOCount = 0;
+  m_fLFOPhase = 0;
   m_portaTargetNote = 0;
   m_fPortaStep = 0;   
   
@@ -975,7 +1046,8 @@ void CLogicalChannel::update(byte ticks)
       case 0: 
         runEnvelopes(); 
         break;
-//      case 1: runLFO();
+      case 1: 
+        runLFO();
         break;
       case 2: 
         runPortamento();

@@ -210,7 +210,7 @@ typedef struct {
   char            hpf;              // 0-127 high pass filter level
   char            dist;             // 0-127 distortion level
   char            eLFOMode;         // LFO run mode
-  float           fLFOStep;         // LFO run step (increment per 8ms of the 0.0-1.0 full range)
+  char            lfoRate;          // LFO rate
   char            eLFOWave;         // LFO wave form
   char            arpRate;          // arp rate from 0 (slowest) to 127 (fastest)
   char            arpCount;         // max notes to include in arpeggio

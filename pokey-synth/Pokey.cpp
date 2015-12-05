@@ -247,6 +247,9 @@ void CPokey::pitch(byte voice, float hz) {
 void CPokey::vol(byte voice, float v) {
   // check for valid divider
   if(m_data[Divider[voice&3]]) { 
+    if(v<0.0) v = 0;
+    if(v>1.0) v = 1.0;
+    
     byte ctrl_reg = Control[voice&3];
     write_reg(ctrl_reg, (m_data[ctrl_reg] & 0xF0)|(byte)(0.5+15.0*v));
   }
@@ -293,6 +296,8 @@ void CPokey::dist(byte voice, float v) {
 // SET HIGH PASS FILTER DIVIDER OF A VOICE
 void CPokey::hpf(byte voice, float v) {
   if(m_flags & FLAG_HPF) {
+    if(v<0.0) v = 0;
+    if(v>1.0) v = 1.0;
     write_reg(HighPass[voice&3], 256 * (1.0 - v));
   }
 }

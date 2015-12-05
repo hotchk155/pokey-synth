@@ -67,6 +67,7 @@ void CLogicalVoice::update()
   CPokey *pokey = (m_voice & VOICE_POKEY2) ? &Pokey2 : &Pokey1;
 
   float value;
+  float lfoDepth;
   
   CLogicalChannel *channel = &Channel[m_channel];
   TONE_CONFIG *conf = channel->m_conf;
@@ -94,9 +95,9 @@ void CLogicalVoice::update()
 //  }
   
   // add LFO modulation
-//  if(conf->lfo2Pitch) {
-//    value = value + channel->m_fLFO * conf->lfo2Pitch/(63.0/12.0);
-//  }  
+  if(conf->lfo2Pitch) {
+    value = value + channel->m_fLFO * conf->lfo2Pitch/(127.0/12.0);
+  }  
   
   // calculate hz value
   value = 440.0 * pow(2.0,((value-57.0)/12.0));
@@ -108,7 +109,8 @@ void CLogicalVoice::update()
   // VOLUME CALCULATION
   ////////////////////////////////////////////////////////////////////////////////
 
-  // mod wheel
+  // Fetch the initial volume (scaled to range 0.0-1.0) from either the
+  // MIDI note velocity or mod wheel if overriding it
   if(conf->modWheelDest & TONE_CONFIG::TO_VOL) {
     value = channel->m_fModWheel;
   }
@@ -116,24 +118,13 @@ void CLogicalVoice::update()
     value = m_midi_vel/127.0;
   }
 
-  // apply volume envelope
-  value *= m_amp.fValue;
-
-  // apply LFO modulation  
-//  if(conf->lfoDest & TONE_CONFIG::TO_VOL) {
-//    value *= channel->m_fLFO;
-//  }
-//  else if(conf->lfoDestNeg & TONE_CONFIG::TO_VOL) {
-//    value *= (1.0-channel->m_fLFO);
-//  }
-
-  // apply mod wheel modulation
-//  if(conf->modWheelDest & TONE_CONFIG::TO_VOL) {
-//    value *= channel->m_fModWheel;
-//  }
-//  else if(conf->modWheelDestNeg & TONE_CONFIG::TO_VOL) {
-//    value *= (1.0-channel->m_fModWheel);
-//  }
+  // The volume is modulated by the LFO and the mod envelope, which are 
+  // mixed according to the LFO-to-Volume depth controller
+  lfoDepth = conf->lfo2Vol / 127.0;
+  value *= (
+    (1.0 - lfoDepth) * m_amp.fValue +
+    (lfoDepth * channel->m_fLFO)
+  );
   
   // apply to POKEY channel
   pokey->vol(m_voice, value);
