@@ -383,10 +383,6 @@ void CLogicalChannel::handleCC(char cc, char value)
       }
     }
     break;
-//  case CC_POKEYPOLY9:
-//    ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_POLY9, value); 
-//    poly9(m_conf->flags & TONE_CONFIG::POKEY_POLY9); 
-//    break;    
   case CC_POKEYRANGE: 
     ccFlag(&m_conf->flags, TONE_CONFIG::POKEY_HIHZ, value); 
     div8_high(!!(m_conf->flags & TONE_CONFIG::POKEY_HIHZ)); 
@@ -394,9 +390,6 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_MIDIVEL: 
     ccFlag(&m_conf->flags, TONE_CONFIG::USE_VELOCITY, value); 
     break;
-//  case CC_UNISON: 
-//    ccFlag(&m_conf->flags, TONE_CONFIG::UNISON, value); 
-//    break;
   case CC_MONO: 
     ccFlag(&m_conf->flags, TONE_CONFIG::MONO, 127); 
     break;
@@ -429,6 +422,9 @@ void CLogicalChannel::handleCC(char cc, char value)
     break;
   case CC_LFORATE: 
     m_conf->lfoRate = value; 
+    break;
+  case CC_LFODEPTH: 
+    m_conf->lfoDepth = value; 
     break;
   case CC_AENVATTACK: 
     m_conf->ampEnv.attackSlope = envSlope(value,0);
@@ -470,78 +466,39 @@ void CLogicalChannel::handleCC(char cc, char value)
   case CC_LFOWAVE: 
     m_conf->eLFOWave = ccMapValue(value, TONE_CONFIG::WAVE_MAX); 
     break;    
+
+
+  case CC_LFODEPTH_MODSRC:
+    m_conf->lfoDepthModSrc = ccMapValue(value, TONE_CONFIG::MODSRC_MAX); 
+    break;    
+  case CC_DETUNE_MODSRC:
+    m_conf->detuneModSrc = ccMapValue(value, TONE_CONFIG::MODSRC_MAX); 
+    break;    
+  case CC_HPF_MODSRC:
+    m_conf->hpfModSrc = ccMapValue(value, TONE_CONFIG::MODSRC_MAX); 
+    break;    
+  case CC_DIST_MODSRC:
+    m_conf->distModSrc = ccMapValue(value, TONE_CONFIG::MODSRC_MAX); 
+    break;    
+  case CC_LFORATE_MODSRC:
+    m_conf->lfoRateModSrc = ccMapValue(value, TONE_CONFIG::MODSRC_MAX); 
+    break;    
+  case CC_ARPATE_MODSRC:
+    m_conf->arpRateModSrc = ccMapValue(value, TONE_CONFIG::MODSRC_MAX); 
+    break;    
       
   // MOD MATRIX SETTINGS FOR LFO
   case CC_LFO_2_PITCH:
-    m_conf->ylfo2Pitch = ccModDepth(value); 
+    m_conf->lfoToPitch = ccModDepth(value); 
     break;    
   case CC_LFO_2_VOL:
-    m_conf->ylfo2Vol = ccModDepth(value); 
+    m_conf->lfoToAmp = ccModDepth(value); 
     break;
-  case CC_LFO_2_MATRIX:
-    m_conf->ylfoDepth = ccModDepth(value); 
-    break;        
-  case CC_LFO_2_DIST:
-    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_DIST, value); 
-    break;    
-  case CC_LFO_2_HPF:
-    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_HPF, value); 
-    break;    
-  case CC_LFO_2_DETUNE:
-    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_DETUNE, value); 
-    break;    
-  case CC_LFO_2_ARP_RATE:
-    ccFlag(&m_conf->lfoDest, TONE_CONFIG::TO_ARP_RATE, value); 
+
+  case CC_ENV_2_PITCH:
+    m_conf->modEnvToPitch = ccModDepth(value); 
     break;    
 
-  // MOD MATRIX SETTINGS FOR MOD ENVELOPE          
-  case CC_ENV_2_PITCH:
-    m_conf->ymodEnv2Pitch = ccModDepth(value); 
-    break;    
-  case CC_ENV_2_MATRIX:
-    m_conf->ymodEnvDepth = ccModDepth(value); 
-    break;    
-  case CC_ENV_2_DISTORTION:
-    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_DIST, value); 
-    break;    
-  case CC_ENV_2_HPF:
-    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_HPF, value); 
-    break;    
-  case CC_ENV_2_DETUNE:
-    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_DETUNE, value); 
-    break;    
-  case CC_ENV_2_LFO_RATE:
-    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_LFO_RATE, value); 
-    break;    
-  case CC_ENV_2_LFO_DEPTH:
-    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_LFO_DEPTH, value); 
-    break;    
-  case CC_ENV_2_ARP_RATE:
-    ccFlag(&m_conf->modEnvDest, TONE_CONFIG::TO_ARP_RATE, value); 
-    break;    
-          
-  // MOD MATRIX SETTINGS FOR MOD WHEEL
-  case CC_MOD_2_VOL:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_VOL, value); 
-    break;    
-  case CC_MOD_2_DIST:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_DIST, value); 
-    break;    
-  case CC_MOD_2_HPF:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_HPF, value); 
-    break;    
-  case CC_MOD_2_DETUNE:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_DETUNE, value); 
-    break;    
-  case CC_MOD_2_LFO_RATE:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_LFO_RATE, value); 
-    break;    
-  case CC_MOD_2_LFO_DEPTH:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_LFO_DEPTH, value); 
-    break;    
-  case CC_MOD_2_ARP_RATE:
-    ccFlag(&m_conf->modWheelDest, TONE_CONFIG::TO_ARP_RATE, value); 
-    break;        
   case CC_ALL_SOUND_OFF:
   case CC_ALL_NOTES_OFF:
     quiet();
@@ -826,14 +783,18 @@ void CLogicalChannel::runDetune()
       return;
     }
   
-    // Mod wheel will override the detune step
-    if(m_conf->modWheelDest & TONE_CONFIG::TO_DETUNE) {
-      m_fDetuneStep = m_fModWheel * 12.0;
-    } 
-    else {
-      m_fDetuneStep = m_conf->detuneLevel/10.0;
+    switch(m_conf->detuneModSrc) {
+      case TONE_CONFIG::MODSRC_WHEEL:
+        m_fDetuneStep = m_fModWheel * 12.0;
+        break;
+      case TONE_CONFIG::MODSRC_ENV:  //TODO
+      case TONE_CONFIG::MODSRC_LFO:  //TODO
+      case TONE_CONFIG::MODSRC_NONE:
+      default:
+        m_fDetuneStep = m_conf->detuneLevel/10.0;
+        break;
     }
-
+  
 /*    
     if(m_conf->flags & TONE_CONFIG::UNISON) {
       if(m_conf->modEnvDest & TONE_CONFIG::TO_DETUNE) {
@@ -861,14 +822,19 @@ void CLogicalChannel::runArpeggiator()
     // if arpeggiation is enabled!
     if((m_conf->flags & TONE_CONFIG::ARPEGGIATE) && isSingleNoteChan(m_conf) && (m_noteCount > 0)) {
 
-      // get arp rate (could be from mod wheel)
       float arpRate;      
-      if(m_conf->modWheelDest & TONE_CONFIG::TO_ARP_RATE) {
-        arpRate = m_fModWheel; 
-      } 
-      else {
-         arpRate = m_conf->arpRate/127.0;
+      switch(m_conf->arpRateModSrc) {
+        case TONE_CONFIG::MODSRC_WHEEL:
+          arpRate = m_fModWheel; 
+          break;
+        case TONE_CONFIG::MODSRC_ENV:  //TODO
+        case TONE_CONFIG::MODSRC_LFO:  //TODO
+        case TONE_CONFIG::MODSRC_NONE:
+        default:
+           arpRate = m_conf->arpRate/127.0;
+          break;
       }
+      
       
 /*      
       if(m_conf->modEnvDest & TONE_CONFIG::TO_ARP_RATE) {

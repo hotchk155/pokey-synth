@@ -36,7 +36,6 @@ enum {
   CC_PORTATIME   = 5,
   
   CC_MIDIVEL    = 14,     
-//  CC_UNISON     = 15,    
   CC_TRANSPOSE  = 16,
   CC_FINETUNE   = 17,
   CC_PBRANGE    = 18,
@@ -46,14 +45,12 @@ enum {
   CC_UNISONTYPE  = 22,
   CC_DETUNELEVEL = 23,
 
-  CC_MOD_2_VOL            = 24,
-  CC_MOD_2_DIST           = 25,
-  CC_MOD_2_HPF            = 26,
-  CC_MOD_2_DETUNE         = 27,
-  CC_MOD_2_LFO_RATE        = 28,
-  CC_MOD_2_LFO_DEPTH       = 29,
-  CC_MOD_2_ARP_RATE       = 30,
-  
+  CC_LFODEPTH_MODSRC  = 25,
+  CC_DETUNE_MODSRC  = 26,
+  CC_HPF_MODSRC  = 27,
+  CC_DIST_MODSRC  = 28,
+  CC_LFORATE_MODSRC  = 29,
+  CC_ARPATE_MODSRC  = 30,
 
   CC_AENVMODE = 71,
   CC_AENVATTACK  = 73,
@@ -62,26 +59,15 @@ enum {
   CC_MENVMODE   = 103,
   CC_MENVATTACK  = 104,
   CC_MENVRELEASE = 105,    
+  
   CC_ENV_2_PITCH        = 85,
-  CC_ENV_2_DISTORTION   = 86,
-  CC_ENV_2_HPF          = 87,
-  CC_ENV_2_DETUNE       = 88,
-  CC_ENV_2_LFO_RATE     = 89,
-  CC_ENV_2_LFO_DEPTH    = 90,
-  CC_ENV_2_ARP_RATE     = 91,
-  CC_ENV_2_MATRIX       = 92,
-
+  
   CC_LFOMODE    = 106,
   CC_LFOWAVE    = 107,
   CC_LFORATE    = 108,
-  CC_LFO_2_MATRIX    = 109,
+  CC_LFODEPTH    = 109,
   CC_LFO_2_PITCH          = 110,
   CC_LFO_2_VOL          = 111,
-  CC_LFO_2_DIST          = 112,
-  CC_LFO_2_HPF           = 113,
-  CC_LFO_2_DETUNE        = 114,
-  CC_LFO_2_ARP_RATE      = 115,
-  
   
   CC_ARPENABLE    = 116,
   CC_ARPRATE    = 117, 
@@ -91,7 +77,6 @@ enum {
   CC_POKEYCFG   = 93,
   CC_POKEYDUAL  = 94,
   CC_POKEYRANGE   = 95,
-//  CC_POKEYPOLY9   = 95,
 
   CC_RESET_CTRL = 121,
   CC_OMNI_ON = 125,
@@ -148,25 +133,12 @@ typedef struct {
   };
   
   enum {
-     TO_VOL           = 0x01,           
-//     TO_PITCH         = 0x02,
-     TO_DIST          = 0x04,
-     TO_HPF           = 0x08,
-     TO_DETUNE        = 0x10,
-     TO_LFO_RATE      = 0x20,
-     TO_LFO_DEPTH     = 0x40,
-     TO_ARP_RATE      = 0x80
-  };
-
-  enum {
     USE_VELOCITY = 0x01,
-//    UNISON       = 0x02,      
-    ARPEGGIATE   = 0x04,      
-    ARP2ENV      = 0x08,
-    POKEY_DUAL   = 0x10,
-    POKEY_HIHZ   = 0x20,
-    MONO         = 0x40
-//    POKEY_POLY9  = 0x40
+    ARPEGGIATE   = 0x02,      
+    ARP2ENV      = 0x04,
+    POKEY_DUAL   = 0x08,
+    POKEY_HIHZ   = 0x10,
+    MONO         = 0x20
   };
 
   enum {
@@ -199,35 +171,68 @@ typedef struct {
     LFO_MAX
   };
   
-  byte            ePokeyMode;       // pokey mode
+  enum {
+     MODSRC_NONE,    // no modulation / use level controller to set value
+     MODSRC_ENV,     // mod envelope
+     MODSRC_LFO,     // LFO
+     MODSRC_WHEEL,    // Mod wheel
+     MODSRC_MAX
+  };
+         
+  byte            ePokeyMode;       // pokey mode  
   byte            flags;            // bit flags
   char            transpose;        // semitone offset -63 to +63 (semitones)
   float           fFineTune;        // fine tune offset (1/10 semitones)  
   char            pitchBendRange;   // pitch bend range (semitones)
   char            portaTime;        // portamento time (16ms per increment)
   char            eUnisonMode;      // unison mode
-  char            detuneLevel;      // detune level -63 to +63 (units depend on mode)
-  char            hpf;              // 0-127 high pass filter level
-  char            dist;             // 0-127 distortion level
-  char            eLFOMode;         // LFO run mode
-  char            lfoRate;          // LFO rate
-  char            eLFOWave;         // LFO wave form
-  char            arpRate;          // arp rate from 0 (slowest) to 127 (fastest)
-  char            arpCount;         // max notes to include in arpeggio
+
+  // ENVELOPES
   
   ENVELOPE        ampEnv;           // amplitude envelope configuration
   ENVELOPE        modEnv;           // modulation envelope configuration
+
+  // PITCH MODULATION
   
-  char            ymodEnv2Pitch;     // 0..127
-  char            ymodEnvDepth;      // 0..127
-  byte            modEnvDest;       
+  char            lfoToPitch;         // vibrato
+  char            modEnvToPitch;      // pitch modulation by envelope
   
-  char            ylfo2Vol;          // 0..127
-  char            ylfo2Pitch;        // 0..127
-  char            ylfoDepth;         // 0..127
-  byte            lfoDest;
+  // AMPLITUDE MODULATION
   
-  byte            modWheelDest;
+  char            lfoToAmp;         // tremelo
+
+  // DETUNE
+  
+  char            detuneLevel;      // detune level -63 to +63 (units depend on mode)
+  byte            detuneModSrc;
+
+  // HIGHPASS
+  
+  char            hpf;              // 0-127 high pass filter level
+  byte            hpfModSrc;
+
+  // DISTORTION
+  
+  char            dist;             // 0-127 distortion level
+  byte            distModSrc;
+
+  // LFO 
+  
+  char            eLFOMode;         // LFO run mode
+  char            eLFOWave;         // LFO wave form
+  
+  char            lfoRate;          // LFO rate
+  char            lfoDepth;         // LFO rate
+  byte            lfoRateModSrc;    // mod source for LFO rate
+  byte            lfoDepthModSrc;   // mod source for LFO depth
+    
+  // ARPEGGIATION
+  
+  char            arpRate;          // arp rate from 0 (slowest) to 127 (fastest)
+  byte            arpRateModSrc;    // mod source for arp rate
+  
+  char            arpCount;         // max notes to include in arpeggio
+    
 } TONE_CONFIG;
 
 extern TONE_CONFIG Patch[MAX_CHANNEL];

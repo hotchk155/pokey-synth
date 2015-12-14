@@ -30,35 +30,46 @@ CPokeySynth::CPokeySynth()
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::initPatch(TONE_CONFIG *conf) 
 {
-  conf->ePokeyMode = CPokey::MODE_8BIT;
+  conf->ePokeyMode = CPokey::MODE_8BITHPF;
   conf->flags = TONE_CONFIG::POKEY_HIHZ;
   conf->transpose = 0;
   conf->fFineTune = 0;
   conf->pitchBendRange = 12;
   conf->portaTime = 0;
-  conf->detuneLevel = 0;
   conf->eUnisonMode = TONE_CONFIG::UNISON_OFF;
-  conf->hpf = 0;              // 0-127 high pass filter level
-  conf->dist = 0;
-  conf->eLFOMode = TONE_CONFIG::LFO_FREE;
-  conf->lfoRate = 10;
-  conf->eLFOWave = TONE_CONFIG::WAVE_TRI;
-  conf->arpRate = 100;
-  conf->arpCount = 3;  
+  
   conf->ampEnv.attackSlope = 65535;
   conf->ampEnv.releaseSlope = 655;
   conf->ampEnv.mode = ENVELOPE::ATT_REL;
-  conf->modEnv.attackSlope = 127;
-  conf->modEnv.releaseSlope = 127;
+  conf->modEnv.attackSlope = 655;
+  conf->modEnv.releaseSlope = 655;
   conf->modEnv.mode = ENVELOPE::ATT_REL;  
-  conf->xmodEnv2Pitch = 0;
-  conf->xmodEnvDepth = 0;
-  conf->modEnvDest = 0;
-  conf->xlfo2Vol = 100;
-  conf->xlfo2Pitch = 0;
-  conf->xlfoDepth = 0;
-  conf->lfoDest = 0;
-  conf->modWheelDest = TONE_CONFIG::TO_ARP_RATE;
+
+  conf->lfoToPitch = 0;
+  conf->modEnvToPitch = 0;
+  conf->lfoToAmp = 0;
+
+  conf->detuneLevel = 0;
+  conf->detuneModSrc = TONE_CONFIG::MODSRC_NONE;
+  
+  conf->hpf = 127;              // 0-127 high pass filter level
+  conf->hpfModSrc = TONE_CONFIG::MODSRC_ENV;
+  
+  conf->dist = 0;
+  conf->distModSrc = TONE_CONFIG::MODSRC_NONE;
+  
+  conf->eLFOMode = TONE_CONFIG::LFO_FREE;
+  conf->eLFOWave = TONE_CONFIG::WAVE_TRI;
+  
+  conf->lfoRate = 10;
+  conf->lfoDepth = 100;
+  conf->lfoRateModSrc = TONE_CONFIG::MODSRC_NONE;
+  conf->lfoDepthModSrc = TONE_CONFIG::MODSRC_NONE;
+  
+  conf->arpRate = 100;
+  conf->arpRateModSrc = TONE_CONFIG::MODSRC_NONE;
+  
+  conf->arpCount = 3;  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
