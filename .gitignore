@@ -32,7 +32,8 @@
 *.GTO
 *.GTP
 *.GTS
-*.TXT
+*_drills.TXT
+*_drills_NPTH.TXT
 *.gm1
 *.gbp
 *.zip
