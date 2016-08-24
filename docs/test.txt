@@ -1,0 +1,3 @@
+pb range scale is wrong
+freq range setting is lost when changing mode
+mod matrix +/- seem reversed

@@ -131,6 +131,16 @@ void CPokeySynth::quiet()
 ///////////////////////////////////////////////////////////////////////////////////
 void CPokeySynth::initIO() 
 {
+  // test whether chip select 1 is shorted to ground
+  // via the "single pokey mode" jumper. This tells 
+  // us that we only have 1 pokey installed
+  pinMode(P_CS1, INPUT_PULLUP);
+  delay(1);
+  m_flags &= ~DUAL_POKEYS;
+  if(digitalRead(P_CS1)) {
+    m_flags |= DUAL_POKEYS;
+  }
+  
   pinMode(P_AD0, OUTPUT);
   pinMode(P_AD1, OUTPUT);
   pinMode(P_AD2, OUTPUT);
@@ -146,16 +156,23 @@ void CPokeySynth::initIO()
   pinMode(P_DB7, OUTPUT);
 
   pinMode(P_CS0, OUTPUT);
-  pinMode(P_CS1, OUTPUT);
+  digitalWrite(P_CS0, HIGH);    
+  
+  if(m_flags & DUAL_POKEYS) {
+    pinMode(P_CS1, OUTPUT);
+    digitalWrite(P_CS1, HIGH);
+  }
+  else {
+    pinMode(P_CS1, INPUT);
+    digitalWrite(P_CS1, LOW);
+  }
+    
   pinMode(P_RW, OUTPUT);
+  digitalWrite(P_RW, LOW);
 
   pinMode(P_LED1, OUTPUT);
   pinMode(P_LED2, OUTPUT);
   pinMode(P_BUTTON, INPUT_PULLUP);
-
-  digitalWrite(P_RW, LOW);
-  digitalWrite(P_CS1, HIGH);
-  digitalWrite(P_CS0, HIGH);  
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

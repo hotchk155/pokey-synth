@@ -15,6 +15,7 @@
 /*
 TODO:
   option to set divider range automatically based on last note
+  program change
 */
 ///////////////////////////////////////////////////////////////////////////////////////////
 #include "Arduino.h"

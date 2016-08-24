@@ -1,0 +1,43 @@
+#CHANNEL
+velocity	n
+unison   	y
+transpose 	-12
+tune		0
+pbrange 	12
+portamento	0
+hpf		0
+dist		0
+detune		fine #fine/interval/spread/stack
+interval	12
+
+#LFO
+lfo		free #hold/free/gate/rtrig/gtrig/1shot/ngate
+wave		tri #tri/ramp/nramp/square/rnd
+rate		60
+depth		127
+
+#AMP ENVELOPE
+envelope	ar #ar/ad/a*r/ad*r/ad**
+attack		127
+release		62
+
+#MOD ENVELOPE
+menvelope	ar #ar/ad/a*r/ad*r/ad**
+mattack		127
+mrelease	62
+
+#MODULATION
+xmodwheel	vol  dist. hpf. detune.	rate+	depth. arp.
+xmenv 		     dist+ hpf. detune.	rate.	depth. arp.
+xlfo		vol+ dist. hpf. detune.                arp.
+
+#ARPEGGIATOR
+arpenable		y
+speed			100
+note_count		8 (1/2/3/4/5/6/7)
+trigenv			n
+
+#POKEY
+config			8 (8/8hpf/16)
+divhigh			y
+dual			n
